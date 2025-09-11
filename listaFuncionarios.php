@@ -17,7 +17,7 @@
     <body>
         <div class="container">
             
-            <? if (!empty($listaFuncionarios)) { ?>
+            <?php if (!empty($listaFuncionarios)) { ?>
                 <h1 class="h4 text-center mx-auto pb-3 mb-4 w-50">Listagem de Funcionários</h1>
                 <table class="table table-striped border w-75 mb-5 mx-auto">
                     <thead>
@@ -29,24 +29,24 @@
                         </tr>
                     </thead>
                       <tbody>
-                        <? foreach ($listaFuncionarios as $funcionario) { ?>
+                        <?php foreach ($listaFuncionarios as $funcionario) { ?>
                             <tr>
-                                <td><?= $funcionario['nome'] ?></td>
-                                <td><?= $funcionario['cargo'] ?></td>
-                                <td><?= $funcionario['empresa'] ?></td>
+                                <td><?php echo htmlspecialchars($funcionario['nome']); ?></td>
+                                <td><?php echo htmlspecialchars($funcionario['cargo']); ?></td>
+                                <td><?php echo htmlspecialchars($funcionario['empresa']); ?></td>
                                 <td>
-                                    <a href="geradorRdp.php?id_funcionario=<?= $funcionario['id_funcionario'] ?>" class="mx-1 text-dark text-decoration-none" title="RDP">
+                                    <a href="geradorRdp.php?id_funcionario=<?php echo $funcionario['id_funcionario']; ?>" class="mx-1 text-dark text-decoration-none" title="RDP">
                                         <i class="fa fa-file-text-o text-dark" aria-hidden="true"></i>
                                     </a>
-                                    <span id="remover-<?= $funcionario['id_funcionario'] ?>" class="mx-1" title="remover funcionário" style="cursor: pointer">
+                                    <span id="remover-<?php echo $funcionario['id_funcionario']; ?>" class="mx-1" title="remover funcionário" style="cursor: pointer">
                                         <i class="text-danger fa fa-times-circle" aria-hidden="true"></i>
                                     </span>
                                     <script>
                                         $(() => {
-                                            $(`#remover-<?= $funcionario['id_funcionario'] ?>`).on('click', function() {
-                                                if (confirm('Deseja realmente excluir o funcionário <?= $funcionario['nome'] ?>?'))
+                                            $(`#remover-<?php echo $funcionario['id_funcionario']; ?>`).on('click', function() {
+                                                if (confirm('Deseja realmente excluir o funcionário <?php echo $funcionario['nome']; ?>?'))
                                                 {
-                                                    $.get(`<?= $_SERVER['PHP_SELF'] ?>?remover=<?= $funcionario['id_funcionario'] ?>`, function(data, status) {
+                                                    $.get(`<?php echo $_SERVER['PHP_SELF']; ?>?remover=<?php echo $funcionario['id_funcionario']; ?>`, function(data, status) {
                                                         var newURL = location.href.split("?")[0];
                                                         window.history.pushState('object', document.title, newURL);
                                                         location.reload(true)       
@@ -57,13 +57,13 @@
                                     </script>
                                 </td>
                             </tr>
-                        <? } ?>
+                        <?php } ?>
                         
                     </tbody>
                 </table>
-            <? } else { ?>
+            <?php } else { ?>
                 <h1 class="h6 font-italic text-secondary text-center mx-auto pb-3 mb-4 w-50">Nenhum funcionário cadastrado</h1>
-            <? } ?>
+            <?php } ?>
             		
             </br></br></br>
         </div>

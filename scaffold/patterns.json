@@ -1,0 +1,79 @@
+{
+  "project": "RDO Construction Management System",
+  "language": "PHP",
+  "version": "7.2+",
+  "patterns": {
+    "architecture": {
+      "type": "MVC",
+      "structure": {
+        "models": "models/",
+        "views": "root (*.php files)",
+        "controllers": "root (cadastro*.php, lista*.php)",
+        "assets": {
+          "css": "css/",
+          "js": "js/",
+          "images": "img/"
+        }
+      }
+    },
+    "models": {
+      "location": "models/",
+      "naming": "PascalCase",
+      "structure": {
+        "properties": "private with snake_case",
+        "constructor": "empty __construct()",
+        "methods": ["__get($attr)", "__set($attr, $value)"]
+      },
+      "example": "models/Obra.php"
+    },
+    "controllers": {
+      "location": "root",
+      "naming": {
+        "create": "cadastro{Entity}.php",
+        "list": "lista{Entity}s.php",
+        "operations": "{operation}{Entity}.php"
+      },
+      "structure": {
+        "imports": [
+          "require_once __DIR__ . '/startup.php'",
+          "use Models\\{Entity}"
+        ],
+        "pattern": "Form handling with POST/GET processing"
+      }
+    },
+    "database": {
+      "orm": "Custom DAO pattern",
+      "connection": "models/Connection.php",
+      "dao": "models/DAO.php",
+      "methods": {
+        "insert": "insere{Entity}",
+        "update": "atualiza{Entity}",
+        "delete": "delete{Entity}",
+        "search": "busca{Entity}Por{Field}",
+        "list": "lista{Entity}s"
+      }
+    },
+    "authentication": {
+      "system": "auth/Auth.php",
+      "session": "PHP sessions",
+      "protection": "Auth::requireAuth()"
+    },
+    "dependencies": {
+      "autoload": "vendor/autoload.php",
+      "framework": "None (vanilla PHP)",
+      "libraries": [
+        "phpoffice/phpspreadsheet",
+        "dompdf/dompdf",
+        "google/cloud-translate"
+      ]
+    },
+    "conventions": {
+      "indentation": "tabs",
+      "braces": "new line",
+      "namespace": "Models namespace for models",
+      "fileEnding": "?>",
+      "encoding": "UTF-8"
+    }
+  },
+  "discovered": "2025-01-11T23:45:00Z"
+}

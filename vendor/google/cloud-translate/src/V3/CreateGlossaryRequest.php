@@ -29,6 +29,22 @@ class CreateGlossaryRequest extends \Google\Protobuf\Internal\Message
     private $glossary = null;
 
     /**
+     * @param string                              $parent   Required. The project name. Please see
+     *                                                      {@see TranslationServiceClient::locationName()} for help formatting this field.
+     * @param \Google\Cloud\Translate\V3\Glossary $glossary Required. The glossary to create.
+     *
+     * @return \Google\Cloud\Translate\V3\CreateGlossaryRequest
+     *
+     * @experimental
+     */
+    public static function build(string $parent, \Google\Cloud\Translate\V3\Glossary $glossary): self
+    {
+        return (new self())
+            ->setParent($parent)
+            ->setGlossary($glossary);
+    }
+
+    /**
      * Constructor.
      *
      * @param array $data {
@@ -75,11 +91,11 @@ class CreateGlossaryRequest extends \Google\Protobuf\Internal\Message
      * Required. The glossary to create.
      *
      * Generated from protobuf field <code>.google.cloud.translation.v3.Glossary glossary = 2 [(.google.api.field_behavior) = REQUIRED];</code>
-     * @return \Google\Cloud\Translate\V3\Glossary
+     * @return \Google\Cloud\Translate\V3\Glossary|null
      */
     public function getGlossary()
     {
-        return isset($this->glossary) ? $this->glossary : null;
+        return $this->glossary;
     }
 
     public function hasGlossary()

@@ -17,7 +17,6 @@
 
 namespace Google\Cloud\Core;
 
-use GuzzleHttp\Psr7;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Uri;
 use Psr\Http\Message\RequestInterface;
@@ -113,8 +112,17 @@ class RequestBuilder
                     unset($options[$parameter]);
                 }
 
-                if ($parameterOptions['location'] === 'query' && array_key_exists($parameter, $options)) {
-                    $query[$parameter] = $options[$parameter];
+                if ($parameterOptions['location'] === 'query') {
+                    // flatten nested querystring parameters into dot-syntax
+                    if (false !== strpos($parameter, '.')) {
+                        list($object, $property) = explode('.', $parameter, 2);
+                        if (isset($options[$object][$property])) {
+                            $options[$parameter] = $options[$object][$property];
+                        }
+                    }
+                    if (array_key_exists($parameter, $options)) {
+                        $query[$parameter] = $options[$parameter];
+                    }
                 }
             }
         }

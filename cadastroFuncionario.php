@@ -1,15 +1,23 @@
 <?php
     require_once __DIR__ . '/startup.php';
+    require_once __DIR__ . '/auth/CSRF.php';
 
     use Models\Empresa;
     use Models\Funcionario;
     use Models\FuncionarioObra;
     use Models\Obra;
+    use Auth\CSRF;
 
     $listaEmpresas = $dao->buscaTodasEmpresas();
 
     if (isset($_POST['submit']))
     {
+        // Verify CSRF token
+        if (!CSRF::verifyPost()) {
+            header("Location: cadastroFuncionario.php?error=invalid_token");
+            exit;
+        }
+        
         if ($_POST['empresa'] == '')
         {
             header('Location: cadastroFuncionario.php?empresaRequired=1');
@@ -38,9 +46,24 @@
     }
     else if (isset($_GET['remover']))
     {
+        // Input validation for GET parameter
+        $id = filter_var($_GET['remover'], FILTER_VALIDATE_INT);
+        if ($id === false || $id <= 0) {
+            header('Location: cadastroFuncionario.php?error=invalid_id');
+            exit;
+        }
+        
         $funcionario = new Funcionario();
-        $funcionario->id_funcionario = $_GET['remover'];
-        $removido = $dao->deleteFuncionario($funcionario);   
+        $funcionario->id_funcionario = $id;
+        
+        // Verify if the funcionario exists before deletion
+        $funcionarioExists = $dao->buscaFuncionarioPorId($id);
+        if ($funcionarioExists) {
+            $removido = $dao->deleteFuncionario($funcionario);   
+        }
+        
+        header('Location: cadastroFuncionario.php');
+        exit;
     }
    
 ?>
@@ -75,9 +98,20 @@
             </ul>
 
             <h1 class="h3 text-center my-3">Cadastro de Funcionário</h1>
+            
+            <?php if (isset($_GET['error']) && $_GET['error'] == 'invalid_id') { ?>
+                <div class="alert alert-danger w-75 mx-auto" role="alert">
+                    ID inválido fornecido.
+                </div>
+            <?php } ?>
+            <?php if (isset($_GET['error']) && $_GET['error'] == 'invalid_token') { ?>
+                <div class="alert alert-danger w-75 mx-auto" role="alert">
+                    Token de segurança inválido.
+                </div>
+            <?php } ?>
 
             <form class="w-75 mx-auto my-4" 
-                action="<?= htmlspecialchars($_SERVER['PHP_SELF']) ?>"
+                action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>"
                 method="POST"
                 id="form"
                 enctype="multipart/form-data">
@@ -101,16 +135,19 @@
                     <label for="empresa">Empresa:</label>
                     <select class="custom-select" name="empresa" id="empresa">
                         <option value="" selected>Selecionar Empresa</option>
-                        <? foreach ($listaEmpresas as $empresa) { ?>
-                            <option value="<?= $empresa['nome_fantasia'] ?>"><?= $empresa['nome_fantasia'] ?></option>
-                        <? } ?>
+                        <?php foreach ($listaEmpresas as $empresa) { ?>
+                            <option value="<?php echo htmlspecialchars($empresa['nome_fantasia']); ?>"><?php echo htmlspecialchars($empresa['nome_fantasia']); ?></option>
+                        <?php } ?>
                     </select>
-                    <? if (isset($_GET['empresaRequired']) && $_GET['empresaRequired'] == 1) { ?>
+                    <?php if (isset($_GET['empresaRequired']) && $_GET['empresaRequired'] == 1) { ?>
                         <p class="small text-danger">
                             Informe empresa
                         </p>
-                    <? } ?>
+                    <?php } ?>
                 </div>
+                
+                <?php echo CSRF::getTokenField(); ?>
+                
                 <button 
                     name="submit"
                     id="submit"
@@ -121,24 +158,23 @@
             </form>
         </div>
         
-        <? require_once __DIR__ . '/listaFuncionarios.php' ?>
+        <?php require_once __DIR__ . '/listaFuncionarios.php'; ?>
     </body>
     
 </html>
 
-<? if (isset($_GET['empresaExiste']) && $_GET['empresaExiste'] == 0) { ?>
+<?php if (isset($_GET['empresaExiste']) && $_GET['empresaExiste'] == 0) { ?>
     <script>
         alert("Empresa inexistente!");
     </script>
-<? } ?>
-<? if (isset($_GET['funcionarioExiste']) && $_GET['funcionarioExiste'] == 1) { ?>
+<?php } ?>
+<?php if (isset($_GET['funcionarioExiste']) && $_GET['funcionarioExiste'] == 1) { ?>
     <script>
         alert("Funcionário informado já tem cadastro na empresa");
     </script>
-<? } ?>
-<? if (isset($_GET['cadastroSucesso']) && $_GET['cadastroSucesso'] == 1) { ?>
+<?php } ?>
+<?php if (isset($_GET['cadastroSucesso']) && $_GET['cadastroSucesso'] == 1) { ?>
     <script>
         alert("Funcionário cadastrado com sucesso!");
     </script>
-<? } ?>
-
+<?php } ?>

@@ -39,12 +39,39 @@ class ListGlossariesRequest extends \Google\Protobuf\Internal\Message
     private $page_token = '';
     /**
      * Optional. Filter specifying constraints of a list operation.
-     * Filtering is not supported yet, and the parameter currently has no effect.
+     * Specify the constraint by the format of "key=value", where key must be
+     * "src" or "tgt", and the value must be a valid language code.
+     * For multiple restrictions, concatenate them by "AND" (uppercase only),
+     * such as: "src=en-US AND tgt=zh-CN". Notice that the exact match is used
+     * here, which means using 'en-US' and 'en' can lead to different results,
+     * which depends on the language code you used when you create the glossary.
+     * For the unidirectional glossaries, the "src" and "tgt" add restrictions
+     * on the source and target language code separately.
+     * For the equivalent term set glossaries, the "src" and/or "tgt" add
+     * restrictions on the term set.
+     * For example: "src=en-US AND tgt=zh-CN" will only pick the unidirectional
+     * glossaries which exactly match the source language code as "en-US" and the
+     * target language code "zh-CN", but all equivalent term set glossaries which
+     * contain "en-US" and "zh-CN" in their language set will be picked.
      * If missing, no filtering is performed.
      *
      * Generated from protobuf field <code>string filter = 4 [(.google.api.field_behavior) = OPTIONAL];</code>
      */
     private $filter = '';
+
+    /**
+     * @param string $parent Required. The name of the project from which to list all of the glossaries. Please see
+     *                       {@see TranslationServiceClient::locationName()} for help formatting this field.
+     *
+     * @return \Google\Cloud\Translate\V3\ListGlossariesRequest
+     *
+     * @experimental
+     */
+    public static function build(string $parent): self
+    {
+        return (new self())
+            ->setParent($parent);
+    }
 
     /**
      * Constructor.
@@ -64,7 +91,20 @@ class ListGlossariesRequest extends \Google\Protobuf\Internal\Message
      *           The first page is returned if `page_token`is empty or missing.
      *     @type string $filter
      *           Optional. Filter specifying constraints of a list operation.
-     *           Filtering is not supported yet, and the parameter currently has no effect.
+     *           Specify the constraint by the format of "key=value", where key must be
+     *           "src" or "tgt", and the value must be a valid language code.
+     *           For multiple restrictions, concatenate them by "AND" (uppercase only),
+     *           such as: "src=en-US AND tgt=zh-CN". Notice that the exact match is used
+     *           here, which means using 'en-US' and 'en' can lead to different results,
+     *           which depends on the language code you used when you create the glossary.
+     *           For the unidirectional glossaries, the "src" and "tgt" add restrictions
+     *           on the source and target language code separately.
+     *           For the equivalent term set glossaries, the "src" and/or "tgt" add
+     *           restrictions on the term set.
+     *           For example: "src=en-US AND tgt=zh-CN" will only pick the unidirectional
+     *           glossaries which exactly match the source language code as "en-US" and the
+     *           target language code "zh-CN", but all equivalent term set glossaries which
+     *           contain "en-US" and "zh-CN" in their language set will be picked.
      *           If missing, no filtering is performed.
      * }
      */
@@ -161,7 +201,20 @@ class ListGlossariesRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * Optional. Filter specifying constraints of a list operation.
-     * Filtering is not supported yet, and the parameter currently has no effect.
+     * Specify the constraint by the format of "key=value", where key must be
+     * "src" or "tgt", and the value must be a valid language code.
+     * For multiple restrictions, concatenate them by "AND" (uppercase only),
+     * such as: "src=en-US AND tgt=zh-CN". Notice that the exact match is used
+     * here, which means using 'en-US' and 'en' can lead to different results,
+     * which depends on the language code you used when you create the glossary.
+     * For the unidirectional glossaries, the "src" and "tgt" add restrictions
+     * on the source and target language code separately.
+     * For the equivalent term set glossaries, the "src" and/or "tgt" add
+     * restrictions on the term set.
+     * For example: "src=en-US AND tgt=zh-CN" will only pick the unidirectional
+     * glossaries which exactly match the source language code as "en-US" and the
+     * target language code "zh-CN", but all equivalent term set glossaries which
+     * contain "en-US" and "zh-CN" in their language set will be picked.
      * If missing, no filtering is performed.
      *
      * Generated from protobuf field <code>string filter = 4 [(.google.api.field_behavior) = OPTIONAL];</code>
@@ -174,7 +227,20 @@ class ListGlossariesRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * Optional. Filter specifying constraints of a list operation.
-     * Filtering is not supported yet, and the parameter currently has no effect.
+     * Specify the constraint by the format of "key=value", where key must be
+     * "src" or "tgt", and the value must be a valid language code.
+     * For multiple restrictions, concatenate them by "AND" (uppercase only),
+     * such as: "src=en-US AND tgt=zh-CN". Notice that the exact match is used
+     * here, which means using 'en-US' and 'en' can lead to different results,
+     * which depends on the language code you used when you create the glossary.
+     * For the unidirectional glossaries, the "src" and "tgt" add restrictions
+     * on the source and target language code separately.
+     * For the equivalent term set glossaries, the "src" and/or "tgt" add
+     * restrictions on the term set.
+     * For example: "src=en-US AND tgt=zh-CN" will only pick the unidirectional
+     * glossaries which exactly match the source language code as "en-US" and the
+     * target language code "zh-CN", but all equivalent term set glossaries which
+     * contain "en-US" and "zh-CN" in their language set will be picked.
      * If missing, no filtering is performed.
      *
      * Generated from protobuf field <code>string filter = 4 [(.google.api.field_behavior) = OPTIONAL];</code>

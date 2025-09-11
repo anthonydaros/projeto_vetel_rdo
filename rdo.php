@@ -131,7 +131,7 @@
                         <img 
                             class="m-2"
                             style="min-width: 70px" 
-                            src="<?= isset($contratada->url_logo) ? $contratada->url_logo : '' ?>">
+                            src="<?php echo htmlspecialchars(isset($contratada->url_logo) ? $contratada->url_logo : '') ?>">
                     </td>
                     <td class="text-center mx-1" style="width: 300px !important; font-size: 16px !important">
                         RELATÓRIO DIÁRIO DE OBRA (R.D.O)
@@ -140,16 +140,16 @@
                         <img 
                             class="my-2"
                             style="min-width: 70px" 
-                            src="<?= isset($contratante->url_logo) ? $contratante->url_logo : '' ?>">
+                            src="<?php echo htmlspecialchars(isset($contratante->url_logo) ? $contratante->url_logo : '') ?>">
                     </td>
                     <td style="max-width: 50px; border-left: 1px solid #444; font-size: 12px !important;">
                         <span class="d-block mx-1 my-1">
                             DATA:
-                            <?= $data ?>                            
+                            <?php echo htmlspecialchars($data) ?>                            
                         </span>
                         <hr style="margin: 0 !important; border-top: 1px solid #444">
                         <span class="d-block mx-1 my-1">
-                            RELATÓRIO Nº: <?= $numeroRelatorio ?>
+                            RELATÓRIO Nº: <?php echo htmlspecialchars($numeroRelatorio) ?>
                         </span>
                     </td>
                 </tr>
@@ -159,20 +159,20 @@
             <table class="table table-bordered my-4">
                 <tr class="px-2">
                     <td style="width: 120px">Contratante</td>
-                    <td><?= $contratante->nome_fantasia ?></td>
+                    <td><?php echo htmlspecialchars($contratante->nome_fantasia) ?></td>
                 </tr>
                 <tr class="px-2">
                     <td>Contratada</td>
-                    <td><?= $contratada->nome_fantasia ?></td>
+                    <td><?php echo htmlspecialchars($contratada->nome_fantasia) ?></td>
                 </tr>
                 <tr class="px-2">
                     <td>Obra</td>
-                    <td><?= $diarioObra->descricao_resumo ?></td>
+                    <td><?php echo htmlspecialchars($diarioObra->descricao_resumo) ?></td>
                 </tr>
             </table>
 
             <!-- TABELA 3 -->
-            <? if (isset($descricaoServico)) { ?>
+            <?php if (isset($descricaoServico)) { ?>
             <table class="table table-bordered my-4">
                 <thead>
                     <tr>
@@ -185,18 +185,18 @@
                     </tr>
                 </thead>
                 <tbody class="align-middle">
-                    <? for ($i = 1; $i <= count($descricaoServico); $i++) { ?>
+                    <?php for ($i = 1; $i <= count($descricaoServico); $i++) { ?>
                         <tr style="font-size:12px !important;">
-                            <td class="my-0 py-0 text-center"><?= $i ?></td>
-                            <td class="my-0 py-0"><?= $descricaoServico[$i-1] ?></td>
+                            <td class="my-0 py-0 text-center"><?php echo htmlspecialchars($i) ?></td>
+                            <td class="my-0 py-0"><?php echo htmlspecialchars($descricaoServico[$i-1]) ?></td>
                         </tr>
-                    <? } ?>
+                    <?php } ?>
                 </tbody>
             </table>
-            <? } ?>
+            <?php } ?>
 
             <!-- TABELA 4 -->
-            <? if (isset($funcionarios)) { ?>
+            <?php if (isset($funcionarios)) { ?>
                 <table class="table align-middle table-bordered text-center mt-4 mb-0 border-bottom-0">
                     <thead>
                         <tr class="py-0">
@@ -218,15 +218,15 @@
                         </tr>
                     </thead>
                     <tbody class="align-middle" style="font-size: 10px !important">
-                        <? for ($i = 1; $i <= count($funcionarios); $i++) { ?>
+                        <?php for ($i = 1; $i <= count($funcionarios); $i++) { ?>
                             <tr class="py-0 my-0" style="max-height: 0em; height: 0em; padding: 0.2em !important">
-                                <td style="padding: 0.2em 0 !important; max-height: 0em !important; max-width: 2px !important" class="my-0 py-0"><?= $i ?></td>
-                                <td style="padding: 0.2em 0.3em !important; max-height: 0em !important;" class="my-0 py-0 text-uppercase"><?= ucwords($funcionarios[$i-1]->nome) ?></td>
-                                <td style="padding: 0.2em 0.3em !important; max-height: 0em !important;" class="my-0 py-0 text-uppercase"><?= ucwords($funcionarios[$i-1]->cargo) ?></td>
-                                <td style="padding: 0.2em !important; max-height: 0em !important;" class="my-0 py-0 text-uppercase"><?= $horaEntrada[$i-1] . ' às ' . $horaSaida[$i-1] ?></td>
-                                <td style="padding: 0.2em 0 !important; max-height: 0em !important; max-width: 5px !important" class="my-0 py-0 text-uppercase"><?= ucwords($funcionarios[$i-1]->nome_fantasia) ?></td>
+                                <td style="padding: 0.2em 0 !important; max-height: 0em !important; max-width: 2px !important" class="my-0 py-0"><?php echo htmlspecialchars($i) ?></td>
+                                <td style="padding: 0.2em 0.3em !important; max-height: 0em !important;" class="my-0 py-0 text-uppercase"><?php echo htmlspecialchars(ucwords($funcionarios[$i-1]->nome)) ?></td>
+                                <td style="padding: 0.2em 0.3em !important; max-height: 0em !important;" class="my-0 py-0 text-uppercase"><?php echo htmlspecialchars(ucwords($funcionarios[$i-1]->cargo)) ?></td>
+                                <td style="padding: 0.2em !important; max-height: 0em !important;" class="my-0 py-0 text-uppercase"><?php echo htmlspecialchars($horaEntrada[$i-1] . ' às ' . $horaSaida[$i-1]) ?></td>
+                                <td style="padding: 0.2em 0 !important; max-height: 0em !important; max-width: 5px !important" class="my-0 py-0 text-uppercase"><?php echo htmlspecialchars(ucwords($funcionarios[$i-1]->nome_fantasia)) ?></td>
                             </tr>
-                        <? } ?>
+                        <?php } ?>
                         
                     </tbody>
                 </table>
@@ -236,7 +236,7 @@
                     <tr style="border-top: 0 !important;">
                         <td class="text-center" style="line-height: 1.2em !important;width: 40%">
                             <p class="my-0 font-weight-bolder">HORÁRIO DE TRABALHO:</p>
-                            <?= $horarioTrabalho ?>
+                            <?php echo htmlspecialchars($horarioTrabalho) ?>
                         </td>
                         <td class="text-center p-0">
                             <div class="py-2" style="border-bottom: 1px solid #333;">
@@ -286,7 +286,7 @@
                         </td>
                     </tr>
                 </table>
-            <? } ?>
+            <?php } ?>
 
             <!-- TABELA 6 -->
             <table class="table table-bordered my-4 mb-2">
@@ -299,7 +299,7 @@
                 </thead>
                 <tbody>
                     <tr>
-                        <td class="pt-0 mt-0 pb-4 mb-3"><?= $obsGeral ? $obsGeral : ' ' ?></td>
+                        <td class="pt-0 mt-0 pb-4 mb-3"><?php echo htmlspecialchars($obsGeral ? $obsGeral : ' ') ?></td>
                     </tr>
                 </tbody>
             </table>
@@ -316,67 +316,67 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <? for ($i = 0; $i < $tamanhoAlbum-$resto; $i += 3) { ?>
+                    <?php for ($i = 0; $i < $tamanhoAlbum-$resto; $i += 3) { ?>
                         <tr>
                             <td>
                                 <p style="text-align: center; vertical-align: middle;">
-                                    <img style="vertical-align: middle;" src="<?= $album[$i]['url'] ?>">
+                                    <img style="vertical-align: middle;" src="<?php echo htmlspecialchars($album[$i]['url']) ?>">
                                 </p>
                             </td>
                             <td>
                                 <p style="text-align: center; vertical-align: middle;">
-                                    <img style="vertical-align: middle;" src="<?= $album[$i+1]['url'] ?>">
+                                    <img style="vertical-align: middle;" src="<?php echo htmlspecialchars($album[$i+1]['url']) ?>">
                                 </p>
                             </td>
                             <td>
                                 <p style="text-align: center; vertical-align: middle;">
-                                    <img style="vertical-align: middle;" src="<?= $album[$i+2]['url'] ?>">
+                                    <img style="vertical-align: middle;" src="<?php echo htmlspecialchars($album[$i+2]['url']) ?>">
                                 </p>
                             </td>
                         </tr>
-                    <? } ?>
+                    <?php } ?>
                     
-                    <? if ($resto == 1) { ?>
+                    <?php if ($resto == 1) { ?>
                         <tr>
                             <td>
                                 <p style="text-align: center; vertical-align: middle;">
-                                    <img style="vertical-align: middle;" src="<?= $album[$tamanhoAlbum-1]['url'] ?>">
+                                    <img style="vertical-align: middle;" src="<?php echo htmlspecialchars($album[$tamanhoAlbum-1]['url']) ?>">
                                 </p>
                             </td>
                             <td></td>
                             <td></td>
                         </tr>
-                    <? } ?>
-                    <? if ($resto == 2) { ?>
+                    <?php } ?>
+                    <?php if ($resto == 2) { ?>
                         <tr>
                             <td>
                                 <p style="text-align: center; vertical-align: middle;">
-                                    <img style="vertical-align: middle;" src="<?= $album[$tamanhoAlbum-2]['url'] ?>">
+                                    <img style="vertical-align: middle;" src="<?php echo htmlspecialchars($album[$tamanhoAlbum-2]['url']) ?>">
                                 </p>
                             </td>
                             <td>
                                 <p style="text-align: center; vertical-align: middle;">
-                                    <img style="vertical-align: middle;" src="<?= $album[$tamanhoAlbum-1]['url'] ?>">
+                                    <img style="vertical-align: middle;" src="<?php echo htmlspecialchars($album[$tamanhoAlbum-1]['url']) ?>">
                                 </p>
                             </td>
                             <td></td>
                         </tr>
-                    <? } ?>
-                    <? for ($i = ceil($tamanhoAlbum / 3) * 3; $i < 12; $i += 3) { ?>
+                    <?php } ?>
+                    <?php for ($i = ceil($tamanhoAlbum / 3) * 3; $i < 12; $i += 3) { ?>
                         <tr>
                             <td></td>
                             <td></td>
                             <td></td>
                         </tr>
-                    <? } ?>
+                    <?php } ?>
                 </tbody>
             </table>
 
             <table class="table table-bordered my-4">
                 <tbody>
                     <tr class="text-center">
-                        <td style="height: 50px !important" class="align-top">VISTO CONTRATANTE: <b><?= $contratante->nome_fantasia ?></b></td>
-                        <td style="height: 50px !important" class="align-top">VISTO CONTRATADA: <b><?= $contratada->nome_fantasia ?></b></td>
+                        <td style="height: 50px !important" class="align-top">VISTO CONTRATANTE: <b><?php echo htmlspecialchars($contratante->nome_fantasia) ?></b></td>
+                        <td style="height: 50px !important" class="align-top">VISTO CONTRATADA: <b><?php echo htmlspecialchars($contratada->nome_fantasia) ?></b></td>
                     </tr>
                 </tbody>
             </table>

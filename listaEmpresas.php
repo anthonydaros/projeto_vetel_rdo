@@ -17,7 +17,7 @@
     <body>
         <div class="container">
             
-            <? if (!empty($listaEmpresas)) { ?>
+            <?php if (!empty($listaEmpresas)) { ?>
                 <h1 class="h4 text-center mx-auto pb-3 mb-4 w-50">Listagem de Empresas Cadastradas</h1>
                 <table class="table table-striped border mb-5 mx-auto" style="width: 60%">
                     <thead>
@@ -29,22 +29,22 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <? foreach ($listaEmpresas as $empresa) { ?>
+                        <?php foreach ($listaEmpresas as $empresa) { ?>
                             <tr>
-                                <td><?= $empresa['id_empresa'] ?></td>
-                                <td><?= $empresa['nome_fantasia'] ?></td>
-                                <td class="text-capitalize"><?= $empresa['contratante_sn'] == 1 ? 'contratante' : 'contratada' ?></td>
+                                <td><?php echo $empresa['id_empresa']; ?></td>
+                                <td><?php echo htmlspecialchars($empresa['nome_fantasia']); ?></td>
+                                <td class="text-capitalize"><?php echo $empresa['contratante_sn'] == 1 ? 'contratante' : 'contratada'; ?></td>
                                 <td class="w-25">
-                                    <span id="remover-<?= $empresa['id_empresa'] ?>" class="btn btn-link p-0 m-0" title="excluir empresa">
+                                    <span id="remover-<?php echo $empresa['id_empresa']; ?>" class="btn btn-link p-0 m-0" title="excluir empresa">
                                         Excluir
                                         <!-- <i class="text-danger fa fa-times-circle" aria-hidden="true"></i> -->
                                     </span>
                                     <script>
                                         $(() => {
-                                            $(`#remover-<?= $empresa['id_empresa'] ?>`).on('click', function() {
-                                                if (confirm('Deseja realmente excluir a empresa <?= $empresa['nome_fantasia']?>?'))
+                                            $(`#remover-<?php echo $empresa['id_empresa']; ?>`).on('click', function() {
+                                                if (confirm('Deseja realmente excluir a empresa <?php echo $empresa['nome_fantasia']; ?>?'))
                                                 {
-                                                    $.get(`<?= $_SERVER['PHP_SELF'] ?>?remover=<?= $empresa['id_empresa'] ?>`, function(data, status) {
+                                                    $.get(`<?php echo $_SERVER['PHP_SELF']; ?>?remover=<?php echo $empresa['id_empresa']; ?>`, function(data, status) {
                                                         var newURL = location.href.split("?")[0];
                                                         window.history.pushState('object', document.title, newURL);
                                                         location.reload(true)       
@@ -55,13 +55,13 @@
                                     </script>
                                 </td>
                             </tr>
-                        <? } ?>
+                        <?php } ?>
                         
                     </tbody>
                 </table>
-            <? } else { ?>
+            <?php } else { ?>
                 <h1 class="h6 font-italic text-secondary text-secondary text-center mx-auto pb-3 mb-4 w-50">Nenhuma empresa foi cadastrada ainda</h1>
-            <? } ?>
+            <?php } ?>
             </br></br></br>
         </div>
     </body>

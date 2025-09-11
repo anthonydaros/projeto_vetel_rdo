@@ -52,7 +52,7 @@ create table imagem(
 alter table imagem add constraint fk_imagem_diario_obra
 foreign key (fk_id_diario_obra) references diario_obra(id_diario_obra) on delete cascade; 
 
-create table funcionario_diario_ora(
+create table funcionario_diario_obra(
     `id_funcionario_diario_obra` int primary key auto_increment,
 	`fk_id_funcionario` int not null,
     `fk_id_diario_obra` int not null,

@@ -43,7 +43,7 @@ class BaseStub
      */
     public function __construct($hostname, $opts, $channel = null)
     {
-        if (!method_exists('ChannelCredentials', 'isDefaultRootsPemSet') ||
+        if (!method_exists('Grpc\ChannelCredentials', 'isDefaultRootsPemSet') ||
             !ChannelCredentials::isDefaultRootsPemSet()) {
             $ssl_roots = file_get_contents(
                 dirname(__FILE__).'/../../etc/roots.pem'
@@ -86,18 +86,22 @@ class BaseStub
     }
 
     private static function updateOpts($opts) {
-        if (!file_exists($composerFile = __DIR__.'/../../composer.json')) {
-            // for grpc/grpc-php subpackage
-            $composerFile = __DIR__.'/../composer.json';
-        }
-        $package_config = json_decode(file_get_contents($composerFile), true);
         if (!empty($opts['grpc.primary_user_agent'])) {
             $opts['grpc.primary_user_agent'] .= ' ';
         } else {
             $opts['grpc.primary_user_agent'] = '';
         }
-        $opts['grpc.primary_user_agent'] .=
-            'grpc-php/'.$package_config['version'];
+        if (defined('\Grpc\VERSION')) {
+            $version_str = \Grpc\VERSION;
+        } else {
+            if (!file_exists($composerFile = __DIR__.'/../../composer.json')) {
+                // for grpc/grpc-php subpackage
+                $composerFile = __DIR__.'/../composer.json';
+            }
+            $package_config = json_decode(file_get_contents($composerFile), true);
+            $version_str = $package_config['version'];
+        }
+        $opts['grpc.primary_user_agent'] .= 'grpc-php/'.$version_str;
         if (!array_key_exists('credentials', $opts)) {
             throw new \Exception("The opts['credentials'] key is now ".
                 'required. Please see one of the '.
@@ -116,7 +120,7 @@ class BaseStub
     public static function getDefaultChannel($hostname, array $opts)
     {
         $channel_opts = self::updateOpts($opts);
-        return new Channel($hostname, $opts);
+        return new Channel($hostname, $channel_opts);
     }
 
     /**
@@ -141,7 +145,7 @@ class BaseStub
      * @param int $timeout in microseconds
      *
      * @return bool true if channel is ready
-     * @throw Exception if channel is in FATAL_ERROR state
+     * @throws Exception if channel is in FATAL_ERROR state
      */
     public function waitForReady($timeout)
     {
@@ -179,7 +183,7 @@ class BaseStub
      * @param $new_state Connect state
      *
      * @return bool true if state is CHANNEL_READY
-     * @throw Exception if state is CHANNEL_FATAL_FAILURE
+     * @throws Exception if state is CHANNEL_FATAL_FAILURE
      */
     private function _checkConnectivityState($new_state)
     {
@@ -224,7 +228,7 @@ class BaseStub
         }
 
         // Remove the port if it is 443
-        // See https://github.com/grpc/grpc/blob/07c9f7a36b2a0d34fcffebc85649cf3b8c339b5d/src/core/lib/security/transport/client_auth_filter.cc#L205
+        // See https://github.com/grpc/grpc/blob/07c9f7a36b2a0d34fcffebc85649cf3b8c339b5d/src/core/filter/auth/client_auth_filter.cc#L205
         if ((strlen($hostname) > 4) && (substr($hostname, -4) === ":443")) {
             $hostname = substr($hostname, 0, -4);
         }
@@ -238,7 +242,7 @@ class BaseStub
      * @param array $metadata The metadata map
      *
      * @return array $metadata Validated and key-normalized metadata map
-     * @throw InvalidArgumentException if key contains invalid characters
+     * @throws InvalidArgumentException if key contains invalid characters
      */
     private function _validate_and_normalize_metadata($metadata)
     {
@@ -423,9 +427,9 @@ class BaseStub
                     $method,
                     $argument,
                     $deserialize,
+                    $this->_UnaryUnaryCallFactory($channel->getNext()),
                     $metadata,
-                    $options,
-                    $this->_UnaryUnaryCallFactory($channel->getNext())
+                    $options
                 );
             };
         }
@@ -452,9 +456,9 @@ class BaseStub
                     $method,
                     $argument,
                     $deserialize,
+                    $this->_UnaryStreamCallFactory($channel->getNext()),
                     $metadata,
-                    $options,
-                    $this->_UnaryStreamCallFactory($channel->getNext())
+                    $options
                 );
             };
         }
@@ -479,9 +483,9 @@ class BaseStub
                 return $channel->getInterceptor()->interceptStreamUnary(
                     $method,
                     $deserialize,
+                    $this->_StreamUnaryCallFactory($channel->getNext()),
                     $metadata,
-                    $options,
-                    $this->_StreamUnaryCallFactory($channel->getNext())
+                    $options
                 );
             };
         }
@@ -506,9 +510,9 @@ class BaseStub
                 return $channel->getInterceptor()->interceptStreamStream(
                     $method,
                     $deserialize,
+                    $this->_StreamStreamCallFactory($channel->getNext()),
                     $metadata,
-                    $options,
-                    $this->_StreamStreamCallFactory($channel->getNext())
+                    $options
                 );
             };
         }

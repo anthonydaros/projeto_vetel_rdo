@@ -382,7 +382,7 @@
                 let sibling = $(thisValue).next()
                 // $('.inputFuncionario').next().empty()
                 $.ajax({
-                    url: '<?= htmlspecialchars($_SERVER['PHP_SELF']) ?>?funcionario='+enteredText,
+                    url: '<?php echo htmlspecialchars($_SERVER['PHP_SELF']) ?>?funcionario='+enteredText,
                     type: 'GET',
                     success: function(result) {
                         if (result)
@@ -510,7 +510,7 @@
                 
                 $(`#inputFuncionario${numFilhos}`).focusin(function(e) {
                     let sibling = $(this).next();
-                    let lista = JSON.parse('<?= json_encode($listaFuncionarios) ?>')
+                    let lista = JSON.parse('<?php echo htmlspecialchars(json_encode($listaFuncionarios)) ?>')
                     
                     //AQUI!!
                     
@@ -643,17 +643,17 @@
             /******************************************************************/
 
             $(() => {
-                let existemServicosDiario = '<?= isset($listaServicos) && !empty($listaServicos) ?>';
+                let existemServicosDiario = '<?php echo isset($listaServicos) && !empty($listaServicos) ?>';
                 if (existemServicosDiario)
                 {
                     $('#table-desc-servicos').removeClass('d-none')
                     
-                    <? foreach ($listaServicos as $descricaoServico) { ?>
-                        addDescricaoServico("<?= $descricaoServico['descricao'] ?>")
-                    <? } ?>
+                    <?php foreach ($listaServicos as $descricaoServico) { ?>
+                        addDescricaoServico("<?php echo htmlspecialchars($descricaoServico['descricao']) ?>")
+                    <?php } ?>
                 }
 
-                let existemFuncionariosDiario = '<?= isset($funcionarioDiarioObra) && !empty($funcionarioDiarioObra) ?>';
+                let existemFuncionariosDiario = '<?php echo isset($funcionarioDiarioObra) && !empty($funcionarioDiarioObra) ?>';
                 if (existemFuncionariosDiario)
                 {
                     $('#table-efetivos').removeClass('d-none');
@@ -661,18 +661,18 @@
                     let horario_trabalho;
                     let horas_trabalhadas;
                     
-                    <? foreach ($funcionarioDiarioObra as $fdo) { ?>
-                        horario_trabalho = '<?= $fdo['horario_trabalho'] ?>'.split(' às ');
-                        horas_trabalhadas = '<?= $fdo['horas_trabalhadas'] ?>';
+                    <?php foreach ($funcionarioDiarioObra as $fdo) { ?>
+                        horario_trabalho = '<?php echo htmlspecialchars($fdo['horario_trabalho']) ?>'.split(' às ');
+                        horas_trabalhadas = '<?php echo htmlspecialchars($fdo['horas_trabalhadas']) ?>';
                         
                         minutos_trabalhados = Math.floor((horas_trabalhadas - Math.floor(horas_trabalhadas)) * 60)
                         minutos_trabalhados = minutos_trabalhados < 10 ? `0${minutos_trabalhados}` : minutos_trabalhados;
 
                         horas_trabalhadas = Math.floor(horas_trabalhadas) < 10 ? `0${Math.floor(horas_trabalhadas)}` : Math.floor(horas_trabalhadas);
   
-                        addFuncionario('<?= $fdo['nome'] ?>', horario_trabalho[0], horario_trabalho[1], `${horas_trabalhadas}:${minutos_trabalhados}`)
+                        addFuncionario('<?php echo htmlspecialchars($fdo['nome']) ?>', horario_trabalho[0], horario_trabalho[1], `${horas_trabalhadas}:${minutos_trabalhados}`)
                         addListenerFuncionario()
-                    <? } ?>
+                    <?php } ?>
                 }
 
                 $('#adicionarDescricao').on('click', function () {
@@ -699,7 +699,7 @@
         <div class="container w-50">
             <ul class="nav nav-tabs my-3 mb-5 w-100 mx-auto">
                 <li class="nav-item">
-                    <a class="nav-link" href="cadastroDiarioObras.php?id_obra=<?= $diarioObra->fk_id_obra ?>">Voltar</a>
+                    <a class="nav-link" href="cadastroDiarioObras.php?id_obra=<?php echo htmlspecialchars($diarioObra->fk_id_obra) ?>">Voltar</a>
                 </li>
             </ul>
             <h1 class="h3 text-black-50 text-center my-3">Formulário para geração automática do R.D.O</h1>
@@ -709,21 +709,21 @@
                 <tbody>
                     <tr>
                         <td class="small-col border-right">Contratante</td>
-                        <td><?= $contratante->nome_fantasia ?></td>
+                        <td><?php echo htmlspecialchars($contratante->nome_fantasia) ?></td>
                     </tr>
                     <tr>
                         <td class="small-col border-right">Contratada</td>
-                        <td><?= $contratada->nome_fantasia ?></td>
+                        <td><?php echo htmlspecialchars($contratada->nome_fantasia) ?></td>
                     </tr>
                     <tr>
                         <td class="small-col border-right">Obra</td>
-                        <td><?= $diarioObra->descricao_resumo ?></td>
+                        <td><?php echo htmlspecialchars($diarioObra->descricao_resumo) ?></td>
                     </tr>
                 </tbody>
             </table>
 
             <form class="mx-auto my-5 clearfix" 
-                action="<?= htmlspecialchars('exportadorPdf.php') ?>"
+                action="<?php echo htmlspecialchars('exportadorPdf.php') ?>"
                 method="POST"
                 id="form"
                 enctype="multipart/form-data">
@@ -736,7 +736,7 @@
                             name="data"
                             style="width: 160px"
                             class="form-control pl-2" 
-                            value="<?= isset($diarioObra) ? (new DateTime($diarioObra->data))->format('Y-m-d') : '' ?>" 
+                            value="<?php echo htmlspecialchars(isset($diarioObra) ? (new DateTime($diarioObra->data))->format('Y-m-d') : '') ?>" 
                             id="data">
                     </div>
                     <div class="form-group w-25">
@@ -746,12 +746,12 @@
                             name="numeroRelatorio"
                             style="width: 100px" 
                             class="form-control" 
-                            value="<?= isset($diarioObra) ? $diarioObra->numero_diario : '' ?>" 
+                            value="<?php echo htmlspecialchars(isset($diarioObra) ? $diarioObra->numero_diario : '') ?>" 
                             id="numeroRelatorio">
 
                         <input type="hidden"
                             name="id_diario_obra"
-                            value="<?= isset($diarioObra) ? $diarioObra->id_diario_obra : 0 ?>">
+                            value="<?php echo htmlspecialchars(isset($diarioObra) ? $diarioObra->id_diario_obra : 0) ?>">
                     </div>
                 </div>
 
@@ -792,7 +792,7 @@
 
                 <!-- FUNCIONÁRIOS -->
                 <div class="form-group clearfix">
-                    <? if (!empty($listaFuncionarios)) { ?>
+                    <?php if (!empty($listaFuncionarios)) { ?>
                         <div class="">
                             <div 
                                 style="cursor: pointer !important;"
@@ -809,7 +809,7 @@
                                 title="Adicionar item"
                                 id="cadastrarFuncionario">
                                 
-                                <a href="<?= htmlspecialchars('cadastroFuncionario.php') ?>" target="_blank" class="mr-3">Cadastrar novo funcionário</a>
+                                <a href="<?php echo htmlspecialchars('cadastroFuncionario.php') ?>" target="_blank" class="mr-3">Cadastrar novo funcionário</a>
                                 <!-- <i style="font-size: 30px !important;" class="fa text-primary fa-floppy-o mr-5" aria-hidden="true"></i> -->
                             </div>
                         </div>
@@ -827,11 +827,11 @@
                             <tbody></tbody>
                         </table>
                         <!-- <p class="float-right">Carga Horária Total: <span id="cargaHorasTotal" class="mr-1">0</span>Hrs</p> -->
-                    <? } else { ?>
+                    <?php } else { ?>
                         <h1 class="h6 font-italic text-secondary text-center mx-auto pb-3 my-5 mb-4 w-50">Nenhum funcionário ainda foi cadastrado!
-                            <a class="my-3 btn btn-link text-left" href="<?= htmlspecialchars('cadastroFuncionario.php') ?>">Cadastrar Funcionários</a>
+                            <a class="my-3 btn btn-link text-left" href="<?php echo htmlspecialchars('cadastroFuncionario.php') ?>">Cadastrar Funcionários</a>
                         </h1>
-                    <? } ?>
+                    <?php } ?>
                 </div>
 
                 <!-- OBS. GERAIS -->
@@ -856,25 +856,25 @@
                     name="submit"
                     value="Gerar Relatório">
 
-                <? if (!empty($album)) { ?>
+                <?php if (!empty($album)) { ?>
                     <div class="dropdown clearfix float-right mb-5 py-0">
                         <button class="btn btn-outline-secondary dropdown-toggle float-right mr-5 mb-5" type="button" id="dropdownMenuButton" data-toggle="dropdown">
-                            Álbum <small><?= count($album) . ' fotos' ?></small>
+                            Álbum <small><?php echo htmlspecialchars(count($album) . ' fotos') ?></small>
                         </button>
                         <div class="dropdown-menu py-0" aria-labelledby="dropdownMenuButton">
-                            <a class="dropdown-item text-dark" href="?baixar_album=1&id_diario_obra=<?= isset($_GET['id_diario_obra']) ? $_GET['id_diario_obra'] : '' ?>">
+                            <a class="dropdown-item text-dark" href="?baixar_album=1&id_diario_obra=<?php echo htmlspecialchars(isset($_GET['id_diario_obra']) ? $_GET['id_diario_obra'] : '') ?>">
                                 Baixar
                             </a>
-                            <a class="dropdown-item text-dark" href="?remover_album=1&id_diario_obra=<?= isset($_GET['id_diario_obra']) ? $_GET['id_diario_obra'] : '' ?>" style="cursor: pointer !important">Remover</a>
+                            <a class="dropdown-item text-dark" href="?remover_album=1&id_diario_obra=<?php echo htmlspecialchars(isset($_GET['id_diario_obra']) ? $_GET['id_diario_obra'] : '') ?>" style="cursor: pointer !important">Remover</a>
                         </div>
                     </div>
-                <? } else { ?>
+                <?php } else { ?>
                     <div class="my-0">
                         <button disabled class="btn btn-light float-right mr-5 mb-5">
                             Álbum <small>0 fotos</small>
                         </button>
                     </div>
-                <? } ?>
+                <?php } ?>
                 
             </form>
         </div>
@@ -900,7 +900,7 @@
             dictDefaultMessage: '<small class="font-italic text-center">UPLOAD DO PACK DE FOTOS </br>(MAX. 12 FOTOS)</small>', 
             addRemoveLinks: true,
             sending: function(file, xhr, formData) {
-                formData.append("id_diario_obra", <?= $diarioObra->id_diario_obra ?>);
+                formData.append("id_diario_obra", <?php echo htmlspecialchars($diarioObra->id_diario_obra) ?>);
             }
         }
     );

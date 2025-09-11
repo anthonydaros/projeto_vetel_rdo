@@ -201,7 +201,7 @@
 
                 if (idOption != '')
                 {
-                    $.get(`<?= $_SERVER['PHP_SELF'] ?>?id_obra=${idOption}&id_funcionario=<?= isset($_GET['id_funcionario']) ? $_GET['id_funcionario'] : 0 ?>`, function(data, status) {
+                    $.get(`<?php echo htmlspecialchars($_SERVER['PHP_SELF']) ?>?id_obra=${idOption}&id_funcionario=<?php echo htmlspecialchars(isset($_GET['id_funcionario']) ? $_GET['id_funcionario'] : 0) ?>`, function(data, status) {
                         data = JSON.parse(data)
                         // console.log(data);
                         
@@ -254,7 +254,7 @@
         </ul>
         <h1 class="h3 text-black-50 text-center my-3">Formulário para geração automática de R.D.P</h1>
         <form class="w-75 mx-auto my-4" 
-            action="<?= htmlspecialchars($_SERVER['PHP_SELF']) ?>"
+            action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']) ?>"
             method="POST"
             id="form"
             enctype="multipart/form-data">
@@ -263,9 +263,9 @@
                 <label for="obra">Selecione a obra em que o funcionário trabalha ou já trabalhou:</label>
                 <select class="custom-select" name="id_obra" id="obra">
                     <option value="" selected class="text-secondary">Selecione a obra</option>
-                    <? foreach ($listaObrasFuncionario as $idObra) { ?>
-                        <option value="<?= $idObra ?>"><?= $dao->buscaObraPorId($idObra)->descricao_resumo ?></option>
-                    <? } ?>
+                    <?php foreach ($listaObrasFuncionario as $idObra) { ?>
+                        <option value="<?php echo htmlspecialchars($idObra) ?>"><?php echo htmlspecialchars($dao->buscaObraPorId($idObra)->descricao_resumo) ?></option>
+                    <?php } ?>
                 </select>
                 
                 <div id="info-obra" class="d-flex flex-column my-4"></div>
@@ -283,7 +283,7 @@
             <input 
                 type="hidden" 
                 name="id_funcionario" 
-                value="<?= isset($_GET['id_funcionario']) ? $_GET['id_funcionario'] : '' ?>">
+                value="<?php echo htmlspecialchars(isset($_GET['id_funcionario']) ? $_GET['id_funcionario'] : '') ?>">
             
             <div class="form-group clearfix">
                 <input type="submit"

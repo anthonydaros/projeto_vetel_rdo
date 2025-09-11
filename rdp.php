@@ -95,7 +95,7 @@
                     <td class="my-1 ml-0 pl-0 mr-0 pr-0" style="width: 140px !important; margin-right: 0 !important; padding-right: 0 !important;">
                         <img 
                             class="my-2 ml-4 mr-0 pr-0 py-2"
-                            src="<?= isset($contratada->url_logo) ? $contratada->url_logo : '' ?>">
+                            src="<?php echo htmlspecialchars(isset($contratada->url_logo) ? $contratada->url_logo : '') ?>">
                     </td>
                     <td class="text-center ml-0 pl-0" style="margin-left: 0 !important; padding-left: 0 !important; font-size: 16px !important">
                         RELATÓRIO DIÁRIO DE PRESENÇA (R.D.P)
@@ -107,15 +107,15 @@
             <table class="mt-4 mb-2" id="header" style="border: none">
                 <tr class="py-0">
                     <td class="mx-1" style="font-size: 12px !important; line-height: 1.4em">
-                        <b>Nome</b>: <?= $funcionario->nome ?> </br>
-                        <b>Cargo</b>: <?= $funcionario->cargo ?> </br>
-                        <b>Período</b>: <?= $meses[$mes_ano[1]-1] ?> de <?= $mes_ano[0] ?></br>
+                        <b>Nome</b>: <?php echo htmlspecialchars($funcionario->nome) ?> </br>
+                        <b>Cargo</b>: <?php echo htmlspecialchars($funcionario->cargo) ?> </br>
+                        <b>Período</b>: <?php echo htmlspecialchars($meses[$mes_ano[1]-1]) ?> de <?php echo htmlspecialchars($mes_ano[0]) ?></br>
                     </td>
                 </tr>
             </table>
             
             <!-- TABELA 3 -->
-            <? if (isset($listaDiariosObra)) { ?>
+            <?php if (isset($listaDiariosObra)) { ?>
                 <table style="font-size: 13px !important; margin-bottom: 0 !important; padding-bottom: 0 !important;" class="table align-middle table-bordered text-center mt-1 mb-0">
                     <thead>
                         <tr class="py-0">
@@ -134,10 +134,10 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <? foreach ($listaDiariosObra as $diario) { ?>
+                        <?php foreach ($listaDiariosObra as $diario) { ?>
                             <tr class="py-0 my-0" style="max-height: 0em; height: 0em;">
-                                <td style="padding: 0.2em 0.3em !important; max-height: 0em !important;" class="my-0 py-0 text-uppercase"><?= (new DateTime($diario['data']))->format('d/m/Y') ?></td>
-                                <td style="padding: 0.2em 0.3em !important; max-height: 0em !important;" class="my-0 py-0 text-uppercase"><?= $diario['horario_trabalho'] ?></td>
+                                <td style="padding: 0.2em 0.3em !important; max-height: 0em !important;" class="my-0 py-0 text-uppercase"><?php echo htmlspecialchars((new DateTime($diario['data']))->format('d/m/Y')) ?></td>
+                                <td style="padding: 0.2em 0.3em !important; max-height: 0em !important;" class="my-0 py-0 text-uppercase"><?php echo htmlspecialchars($diario['horario_trabalho']) ?></td>
                                 <td style="padding: 0.2em !important; max-height: 0em !important;" class="my-0 py-0 text-uppercase">
                                     <?php
                                         if ($diario['horas_trabalhadas'] * 10 - floor($diario['horas_trabalhadas'] * 10))
@@ -174,10 +174,10 @@
                                     ?>
                                 </td>
                             </tr>
-                        <? } ?>
+                        <?php } ?>
                     </tbody>
                 </table>
-            <? } ?>
+            <?php } ?>
             
             <table style="margin-top: -1px !important; padding-top: 0 !important; border-top:0;" class="border-top-0 mt-0 mb-2 table table-bordered" >
                 <tr class="my-0 py-0 border-top" style="">

@@ -4,7 +4,7 @@
 
 [![Latest Stable Version](https://poser.pugx.org/google/cloud-translate/v/stable)](https://packagist.org/packages/google/cloud-translate) [![Packagist](https://img.shields.io/packagist/dm/google/cloud-translate.svg)](https://packagist.org/packages/google/cloud-translate)
 
-* [API documentation](http://googleapis.github.io/google-cloud-php/#/docs/cloud-translate/latest)
+* [API documentation](https://cloud.google.com/php/docs/reference/cloud-translate/latest)
 
 **NOTE:** This repository is part of [Google Cloud PHP](https://github.com/googleapis/google-cloud-php). Any
 support requests, bug reports, or development contributions should be directed to
@@ -19,24 +19,41 @@ Machine Learning API family.
 
 To begin, install the preferred dependency manager for PHP, [Composer](https://getcomposer.org/).
 
-Now to install just this component:
+Now install this component:
 
 ```sh
 $ composer require google/cloud-translate
 ```
 
-Or to install the entire suite of components at once:
-
-```sh
-$ composer require google/cloud
-```
-
 ### Authentication
 
-Please see our [Authentication guide](https://github.com/googleapis/google-cloud-php/blob/master/AUTHENTICATION.md) for more information
+Please see our [Authentication guide](https://github.com/googleapis/google-cloud-php/blob/main/AUTHENTICATION.md) for more information
 on authenticating your client. Once authenticated, you'll be ready to start making requests.
 
-### Sample Using the Handwritten Client (Interacts with the V2 API)
+### Sample
+
+```php
+Google\ApiCore\ApiException;
+Google\Cloud\Translate\V3\AdaptiveMtDataset;
+Google\Cloud\Translate\V3\Client\TranslationServiceClient;
+Google\Cloud\Translate\V3\GetAdaptiveMtDatasetRequest;
+
+// Create a client.
+$translationServiceClient = new TranslationServiceClient();
+
+// Prepare the request message.
+$request = (new GetAdaptiveMtDatasetRequest())
+    ->setName($formattedName);
+
+// Call the API and handle any network failures.
+try {
+    /** @var AdaptiveMtDataset $response */
+    $response = $translationServiceClient->getAdaptiveMtDataset($request);
+    printf('Response data: %s' . PHP_EOL, $response->serializeToJsonString());
+} catch (ApiException $ex) {
+    printf('Call failed with message: %s' . PHP_EOL, $ex->getMessage());
+}
+``` Using the Handwritten Client (Interacts with the V2 API)
 
 ```php
 require 'vendor/autoload.php';
@@ -77,7 +94,30 @@ foreach ($languages as $language) {
 }
 ```
 
-### Sample Using the Generated Client (Interacts with the V3 API)
+### Sample
+
+```php
+Google\ApiCore\ApiException;
+Google\Cloud\Translate\V3\AdaptiveMtDataset;
+Google\Cloud\Translate\V3\Client\TranslationServiceClient;
+Google\Cloud\Translate\V3\GetAdaptiveMtDatasetRequest;
+
+// Create a client.
+$translationServiceClient = new TranslationServiceClient();
+
+// Prepare the request message.
+$request = (new GetAdaptiveMtDatasetRequest())
+    ->setName($formattedName);
+
+// Call the API and handle any network failures.
+try {
+    /** @var AdaptiveMtDataset $response */
+    $response = $translationServiceClient->getAdaptiveMtDataset($request);
+    printf('Response data: %s' . PHP_EOL, $response->serializeToJsonString());
+} catch (ApiException $ex) {
+    printf('Call failed with message: %s' . PHP_EOL, $ex->getMessage());
+}
+``` Using the Generated Client (Interacts with the V3 API)
 
 ```php
 require 'vendor/autoload.php';
@@ -111,6 +151,11 @@ REST & HTTP/1.1 only.
 
 The handwritten client can be found under `Google\Cloud\Translate\TranslateClient`, whereas the generated client is
 found under `Google\Cloud\Translate\V3\TranslationServiceClient`.
+
+### Debugging
+
+Please see our [Debugging guide](https://github.com/googleapis/google-cloud-php/blob/main/DEBUG.md)
+for more information about the debugging tools.
 
 ### Version
 

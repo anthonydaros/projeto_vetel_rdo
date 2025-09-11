@@ -19,7 +19,7 @@
     <body>
         <div class="container">
             
-            <? if (!empty($listaObras)) { ?>
+            <?php if (!empty($listaObras)) { ?>
                 <h1 class="h4 text-center mx-auto pb-3 mb-4 w-50">Listagem de Obras</h1>
                 <table class="table table-striped border w-75 mb-5 mx-auto">
                     <thead>
@@ -32,29 +32,29 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <? foreach ($listaObras as $obra) { ?>
+                        <?php foreach ($listaObras as $obra) { ?>
                             <tr>
-                                <td><?= $obra['id_obra'] ?></td>
-                                <td class="w-50"><?= $obra['descricao_resumo'] ?></td>
-                                <td><?= $dao->buscaEmpresaPorId($obra['fk_id_contratante'])->nome_fantasia ?></td>
-                                <td><?= $dao->buscaEmpresaPorId($obra['fk_id_contratada'])->nome_fantasia ?></td>
+                                <td><?php echo $obra['id_obra']; ?></td>
+                                <td class="w-50"><?php echo htmlspecialchars($obra['descricao_resumo']); ?></td>
+                                <td><?php echo htmlspecialchars($dao->buscaEmpresaPorId($obra['fk_id_contratante'])->nome_fantasia); ?></td>
+                                <td><?php echo htmlspecialchars($dao->buscaEmpresaPorId($obra['fk_id_contratada'])->nome_fantasia); ?></td>
                                 <td>
-                                    <a href="cadastroDiarioObras.php?id_obra=<?= $obra['id_obra'] ?>"
+                                    <a href="cadastroDiarioObras.php?id_obra=<?php echo $obra['id_obra']; ?>"
                                         style="text-decoration: none"
                                         title="gerir relatórios" 
                                         class="mx-1" 
                                         style="cursor: pointer">
                                         <i class="fa fa-file-text-o text-dark" aria-hidden="true"></i>
                                     </a>
-                                    <span id="remover-<?= $obra['id_obra'] ?>" title="remover obra" class="mx-1" style="cursor: pointer">
+                                    <span id="remover-<?php echo $obra['id_obra']; ?>" title="remover obra" class="mx-1" style="cursor: pointer">
                                         <i class="text-danger fa fa-times-circle" aria-hidden="true"></i>
                                     </span>
                                     <script>
                                         $(() => {
-                                            $(`#remover-<?= $obra['id_obra'] ?>`).on('click', function() {
-                                                if (confirm('Deseja realmente excluir a obra ID '+ <?= $obra['id_obra'] ?>+'?'))
+                                            $(`#remover-<?php echo $obra['id_obra']; ?>`).on('click', function() {
+                                                if (confirm('Deseja realmente excluir a obra ID '+ <?php echo $obra['id_obra']; ?>+'?'))
                                                 {
-                                                    $.get(`<?= $_SERVER['PHP_SELF'] ?>?remover=<?= $obra['id_obra'] ?>`, function(data, status) {
+                                                    $.get(`<?php echo $_SERVER['PHP_SELF']; ?>?remover=<?php echo $obra['id_obra']; ?>`, function(data, status) {
                                                         var newURL = location.href.split("?")[0];
                                                         window.history.pushState('object', document.title, newURL);
                                                         location.reload(true) 
@@ -66,13 +66,13 @@
                                     </script>
                                 </td>
                             </tr>
-                        <? } ?>
+                        <?php } ?>
                         
                     </tbody>
                 </table>
-            <? } else { ?>
+            <?php } else { ?>
                 <h1 class="h6 font-italic text-secondary text-center mx-auto pb-3 mb-4 w-50">Nenhuma obra cadastrada</h1>
-            <? } ?>
+            <?php } ?>
             </br></br></br>
         </div>
     </body>

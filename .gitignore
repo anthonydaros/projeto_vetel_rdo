@@ -1,0 +1,47 @@
+# Environment Configuration
+.env
+.env.local
+.env.*.local
+
+# IDE Files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+logs/
+*.log
+error_log
+access_log
+
+# Dependencies
+/vendor/
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Temporary Files
+*.tmp
+*.temp
+*.cache
+
+# Backup Files
+*.bak
+*.backup
+*.old
+
+# Session Files
+sess_*
+
+# Upload temporary files
+/tmp/
+/temp/
+
+# Generated files
+/relatorios/*.pdf
+
+# PHP Composer
+composer.phar

@@ -1,11 +1,13 @@
 <?php
     require_once __DIR__ . '/startup.php';
     require_once __DIR__ . '/ftpFunctions.php';
+    require_once __DIR__ . '/auth/CSRF.php';
     
     use Models\Empresa;
     use Models\Funcionario;
     use Models\FuncionarioDiarioObra;
     use Models\Obra;
+    use Auth\CSRF;
     
     $listaEmpresas = $dao->buscaTodasEmpresas();
     $listaEmpresasContratantes = array_filter($listaEmpresas, function($empresa) {
@@ -17,9 +19,17 @@
 
     if (isset($_POST['submit']))
     {
+        // Verify CSRF token
+        if (!CSRF::verifyPost()) {
+            header("Location: cadastroObra.php?error=invalid_token");
+            exit;
+        }
+        
         $descricaoResumo = trim(isset($_POST['obra']) ? $_POST['obra'] : '');
 
         $msg = '';
+        $contratante = null;
+        $contratada = null;
 
         if ($descricaoResumo == '')
         {
@@ -71,8 +81,24 @@
     }
     else if (isset($_GET['remover']))
     {
+        // Input validation for GET parameter
+        $id = filter_var($_GET['remover'], FILTER_VALIDATE_INT);
+        if ($id === false || $id <= 0) {
+            echo json_encode(['error' => 'ID inválido fornecido']);
+            http_response_code(400);
+            exit;
+        }
+        
         $obra = new Obra();
-        $obra->id_obra = $_GET['remover'];
+        $obra->id_obra = $id;
+        
+        // Verify if the obra exists before deletion
+        $obraExists = $dao->buscaObraPorId($id);
+        if (!$obraExists) {
+            echo json_encode(['error' => 'Obra não encontrada']);
+            http_response_code(404);
+            exit;
+        }
         
         $listaDiariosObra = $dao->buscaTodosDiariosDaObra($obra->id_obra);
         
@@ -82,7 +108,9 @@
 
             foreach ($album as $foto)
             {
-                unlink($foto['url']);
+                if (file_exists($foto['url'])) {
+                    unlink($foto['url']);
+                }
             }
 
             $ret = $dao->deleteAlbum($diarioObra['id_diario_obra']);
@@ -124,12 +152,20 @@
             </ul>
 
             <h1 class="h3 text-center my-3">Cadastro de Obra</h1>
+            
+            <?php if (isset($_GET['error']) && $_GET['error'] == 'invalid_token') { ?>
+                <div class="alert alert-danger w-75 mx-auto" role="alert">
+                    Token de segurança inválido.
+                </div>
+            <?php } ?>
 
             <form class="w-75 mx-auto my-4" 
-                action="<?= htmlspecialchars($_SERVER['PHP_SELF']) ?>"
+                action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>"
                 method="POST"
                 id="form"
                 enctype="multipart/form-data">
+                
+                <?php echo CSRF::getTokenField(); ?>
 
                 <!-- <div class="form-group my-3 w-75 mx-auto">
                     <label for="contratante">Contratante:</label>
@@ -140,15 +176,15 @@
                     <label for="contratante">Contratante:</label>
                     <select class="custom-select" name="contratante" id="contratante">
                         <option value="" selected class="text-secondary">Selecionar empresa contratante</option>
-                        <? foreach ($listaEmpresasContratantes as $empresa) { ?>
-                            <option value="<?= $empresa['nome_fantasia'] ?>"><?= $empresa['nome_fantasia'] ?></option>
-                        <? } ?>
+                        <?php foreach ($listaEmpresasContratantes as $empresa) { ?>
+                            <option value="<?php echo htmlspecialchars($empresa['nome_fantasia']); ?>"><?php echo htmlspecialchars($empresa['nome_fantasia']); ?></option>
+                        <?php } ?>
                     </select>
-                    <? if (isset($_GET['contratanteRequired']) && $_GET['contratanteRequired'] == 1) { ?>
+                    <?php if (isset($_GET['contratanteRequired']) && $_GET['contratanteRequired'] == 1) { ?>
                         <p class="small text-danger">
                             Informe empresa contratante
                         </p>
-                    <? } ?>
+                    <?php } ?>
                 </div>
 
                 <!-- <div class="form-group my-3 w-75 mx-auto">
@@ -160,26 +196,26 @@
                     <label for="contratada">Contratada:</label>
                     <select class="custom-select" name="contratada" id="contratada">
                         <option value="" selected class="text-secondary">Selecionar empresa contratada</option>
-                        <? foreach ($listaEmpresasContratadas as $empresa) { ?>
-                            <option value="<?= $empresa['nome_fantasia'] ?>"><?= $empresa['nome_fantasia'] ?></option>
-                        <? } ?>
+                        <?php foreach ($listaEmpresasContratadas as $empresa) { ?>
+                            <option value="<?php echo htmlspecialchars($empresa['nome_fantasia']); ?>"><?php echo htmlspecialchars($empresa['nome_fantasia']); ?></option>
+                        <?php } ?>
                     </select>
-                    <? if (isset($_GET['contratadaRequired']) && $_GET['contratadaRequired'] == 1) { ?>
+                    <?php if (isset($_GET['contratadaRequired']) && $_GET['contratadaRequired'] == 1) { ?>
                         <p class="small text-danger">
                             Informe empresa contratada
                         </p>
-                    <? } ?>
+                    <?php } ?>
                 </div>
 
                 <div class="form-group w-75 mx-auto">
                     <label for="obra">Obra:</label>
                     <input type="text" name="obra" class="form-control" id="obra">
                     
-                    <? if (isset($_GET['obraRequired']) && $_GET['obraRequired'] == 1) { ?>
+                    <?php if (isset($_GET['obraRequired']) && $_GET['obraRequired'] == 1) { ?>
                         <p class="small text-danger">
                             Informe a descrição da obra
                         </p>
-                    <? } ?>
+                    <?php } ?>
                 </div>
 
                 <button 
@@ -195,13 +231,13 @@
             
         </script>
 
-        <? require_once __DIR__ . '/listaObras.php' ?>
+        <?php require_once __DIR__ . '/listaObras.php'; ?>
     </body>
     
 </html>
 
-<? if (isset($_GET['cadastroSucesso']) && $_GET['cadastroSucesso'] == 1) { ?>
+<?php if (isset($_GET['cadastroSucesso']) && $_GET['cadastroSucesso'] == 1) { ?>
     <script>
         alert("Obra cadastrada com sucesso!");
     </script>
-<? } ?>
+<?php } ?>

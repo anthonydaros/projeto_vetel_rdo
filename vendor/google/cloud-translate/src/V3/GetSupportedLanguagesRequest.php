@@ -44,13 +44,56 @@ class GetSupportedLanguagesRequest extends \Google\Protobuf\Internal\Message
      *   `projects/{project-number-or-id}/locations/{location-id}/models/{model-id}`
      * - General (built-in) models:
      *   `projects/{project-number-or-id}/locations/{location-id}/models/general/nmt`,
-     *   `projects/{project-number-or-id}/locations/{location-id}/models/general/base`
      * Returns languages supported by the specified model.
-     * If missing, we get supported languages of Google general base (PBMT) model.
+     * If missing, we get supported languages of Google general NMT model.
      *
      * Generated from protobuf field <code>string model = 2 [(.google.api.field_behavior) = OPTIONAL];</code>
      */
     private $model = '';
+
+    /**
+     * @param string $parent              Required. Project or location to make a call. Must refer to a caller's
+     *                                    project.
+     *
+     *                                    Format: `projects/{project-number-or-id}` or
+     *                                    `projects/{project-number-or-id}/locations/{location-id}`.
+     *
+     *                                    For global calls, use `projects/{project-number-or-id}/locations/global` or
+     *                                    `projects/{project-number-or-id}`.
+     *
+     *                                    Non-global location is required for AutoML models.
+     *
+     *                                    Only models within the same region (have same location-id) can be used,
+     *                                    otherwise an INVALID_ARGUMENT (400) error is returned. Please see
+     *                                    {@see TranslationServiceClient::locationName()} for help formatting this field.
+     * @param string $model               Optional. Get supported languages of this model.
+     *
+     *                                    The format depends on model type:
+     *
+     *                                    - AutoML Translation models:
+     *                                    `projects/{project-number-or-id}/locations/{location-id}/models/{model-id}`
+     *
+     *                                    - General (built-in) models:
+     *                                    `projects/{project-number-or-id}/locations/{location-id}/models/general/nmt`,
+     *
+     *
+     *                                    Returns languages supported by the specified model.
+     *                                    If missing, we get supported languages of Google general NMT model.
+     * @param string $displayLanguageCode Optional. The language to use to return localized, human readable names
+     *                                    of supported languages. If missing, then display names are not returned
+     *                                    in a response.
+     *
+     * @return \Google\Cloud\Translate\V3\GetSupportedLanguagesRequest
+     *
+     * @experimental
+     */
+    public static function build(string $parent, string $model, string $displayLanguageCode): self
+    {
+        return (new self())
+            ->setParent($parent)
+            ->setModel($model)
+            ->setDisplayLanguageCode($displayLanguageCode);
+    }
 
     /**
      * Constructor.
@@ -79,9 +122,8 @@ class GetSupportedLanguagesRequest extends \Google\Protobuf\Internal\Message
      *             `projects/{project-number-or-id}/locations/{location-id}/models/{model-id}`
      *           - General (built-in) models:
      *             `projects/{project-number-or-id}/locations/{location-id}/models/general/nmt`,
-     *             `projects/{project-number-or-id}/locations/{location-id}/models/general/base`
      *           Returns languages supported by the specified model.
-     *           If missing, we get supported languages of Google general base (PBMT) model.
+     *           If missing, we get supported languages of Google general NMT model.
      * }
      */
     public function __construct($data = NULL) {
@@ -168,9 +210,8 @@ class GetSupportedLanguagesRequest extends \Google\Protobuf\Internal\Message
      *   `projects/{project-number-or-id}/locations/{location-id}/models/{model-id}`
      * - General (built-in) models:
      *   `projects/{project-number-or-id}/locations/{location-id}/models/general/nmt`,
-     *   `projects/{project-number-or-id}/locations/{location-id}/models/general/base`
      * Returns languages supported by the specified model.
-     * If missing, we get supported languages of Google general base (PBMT) model.
+     * If missing, we get supported languages of Google general NMT model.
      *
      * Generated from protobuf field <code>string model = 2 [(.google.api.field_behavior) = OPTIONAL];</code>
      * @return string
@@ -187,9 +228,8 @@ class GetSupportedLanguagesRequest extends \Google\Protobuf\Internal\Message
      *   `projects/{project-number-or-id}/locations/{location-id}/models/{model-id}`
      * - General (built-in) models:
      *   `projects/{project-number-or-id}/locations/{location-id}/models/general/nmt`,
-     *   `projects/{project-number-or-id}/locations/{location-id}/models/general/base`
      * Returns languages supported by the specified model.
-     * If missing, we get supported languages of Google general base (PBMT) model.
+     * If missing, we get supported languages of Google general NMT model.
      *
      * Generated from protobuf field <code>string model = 2 [(.google.api.field_behavior) = OPTIONAL];</code>
      * @param string $var

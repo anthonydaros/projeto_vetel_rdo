@@ -1,0 +1,15 @@
+{
+  "session": {
+    "id": "scaffold_2025_01_11_234500",
+    "started": "2025-01-11T23:45:00Z",
+    "lastModified": "2025-01-11T23:45:00Z",
+    "status": "initialized"
+  },
+  "currentFeature": null,
+  "completedFeatures": [],
+  "inProgress": null,
+  "created": {
+    "files": [],
+    "directories": []
+  }
+}

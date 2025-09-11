@@ -10,10 +10,24 @@
 
     if (isset($_GET['id_obra']))
     {
-        $listaDiariosObra = $dao->buscaTodosDiariosDaObra($_GET['id_obra']);
+        // Input validation for GET parameter id_obra
+        $id_obra = filter_var($_GET['id_obra'], FILTER_VALIDATE_INT);
+        if ($id_obra === false || $id_obra <= 0) {
+            header('Location: cadastroObra.php?error=invalid_id');
+            exit;
+        }
+        
+        // Verify if obra exists
+        $obraExists = $dao->buscaObraPorId($id_obra);
+        if (!$obraExists) {
+            header('Location: cadastroObra.php?error=obra_not_found');
+            exit;
+        }
+        
+        $listaDiariosObra = $dao->buscaTodosDiariosDaObra($id_obra);
         // $data = date('Y-m-d');
         $diarioObra = new DiarioObra();
-        $diarioObra->fk_id_obra = $_GET['id_obra'];
+        $diarioObra->fk_id_obra = $id_obra;
 
         if (!empty($listaDiariosObra))
         {
@@ -30,11 +44,37 @@
     }
     else if (isset($_POST['id_obra']))
     {
+        // Input validation for POST parameter id_obra
+        $id_obra = filter_var($_POST['id_obra'], FILTER_VALIDATE_INT);
+        if ($id_obra === false || $id_obra <= 0) {
+            header('Location: cadastroObra.php?error=invalid_id');
+            exit;
+        }
+        
+        // Verify if obra exists
+        $obraExists = $dao->buscaObraPorId($id_obra);
+        if (!$obraExists) {
+            header("Location: cadastroDiarioObras.php?id_obra=$id_obra&error=obra_not_found");
+            exit;
+        }
+        
         $diarioObra = new DiarioObra();
 
-        $diarioObra->fk_id_obra = $_POST['id_obra'];
-        $diarioObra->numero_diario = isset($_POST['numero_relatorio']) ? $_POST['numero_relatorio'] : 1;
+        $diarioObra->fk_id_obra = $id_obra;
+        $diarioObra->numero_diario = isset($_POST['numero_relatorio']) ? intval($_POST['numero_relatorio']) : 1;
         $diarioObra->data = isset($_POST['data']) ? $_POST['data'] : date('Y-m-d');
+        
+        // Additional validation for numero_relatorio
+        if ($diarioObra->numero_diario <= 0) {
+            header("Location: cadastroDiarioObras.php?id_obra=$id_obra&error=invalid_numero");
+            exit;
+        }
+        
+        // Validate date format
+        if (!DateTime::createFromFormat('Y-m-d', $diarioObra->data)) {
+            header("Location: cadastroDiarioObras.php?id_obra=$id_obra&error=invalid_date");
+            exit;
+        }
         
         if (!$dao->buscaDiarioObraPorIdObraDataNumero($diarioObra))
         {
@@ -49,20 +89,44 @@
     }
     else if(isset($_GET['remover']))
     {
-        $diarioObra = new DiarioObra();
+        // Input validation for GET parameter remover
+        $id = filter_var($_GET['remover'], FILTER_VALIDATE_INT);
+        if ($id === false || $id <= 0) {
+            header('Location: cadastroObra.php?error=invalid_id');
+            exit;
+        }
         
-        $diarioObra->id_diario_obra = $_GET['remover'];
+        $diarioObra = new DiarioObra();
+        $diarioObra->id_diario_obra = $id;
+        
+        // Verify if diario exists before deletion
+        $diarioExists = $dao->buscaDiarioObraPorId($id);
+        if (!$diarioExists) {
+            header('Location: cadastroObra.php?error=diario_not_found');
+            exit;
+        }
 
         $album = $dao->buscaAlbumDiario($diarioObra->id_diario_obra);
         
         foreach ($album as $foto)
         {
-            unlink($foto['url']);
+            if (file_exists($foto['url'])) {
+                unlink($foto['url']);
+            }
         }
         
         $ret = $dao->deleteAlbum($diarioObra->id_diario_obra);
 
         $removido = $dao->deleteDiarioObra($diarioObra);
+        
+        // Get the obra ID to redirect properly
+        $obraId = $diarioExists->fk_id_obra ?? 0;
+        if ($obraId > 0) {
+            header("Location: cadastroDiarioObras.php?id_obra=$obraId");
+        } else {
+            header('Location: cadastroObra.php');
+        }
+        exit;
     }
     
 ?>
@@ -92,8 +156,36 @@
                 </li>
             </ul>
             <h1 class="h3 text-secondary text-center my-5 mx-auto">Relatórios Diários de Obra</h1>
+            
+            <?php if (isset($_GET['error'])) { ?>
+                <div class="alert alert-danger w-75 mx-auto" role="alert">
+                    <?php 
+                    switch($_GET['error']) {
+                        case 'invalid_id':
+                            echo 'ID inválido fornecido.';
+                            break;
+                        case 'obra_not_found':
+                            echo 'Obra não encontrada.';
+                            break;
+                        case 'diario_not_found':
+                            echo 'Diário não encontrado.';
+                            break;
+                        case 'invalid_numero':
+                            echo 'Número do relatório deve ser maior que zero.';
+                            break;
+                        case 'invalid_date':
+                            echo 'Formato de data inválido.';
+                            break;
+                        default:
+                            echo 'Erro desconhecido.';
+                    }
+                    ?>
+                </div>
+            <?php } ?>
+            
+            <?php if (isset($diarioObra)): ?>
             <form class="w-75 mx-auto my-4" 
-                action="<?= htmlspecialchars($_SERVER['PHP_SELF']) ?>"
+                action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']) ?>"
                 method="POST"
                 id="form"
                 enctype="multipart/form-data">
@@ -106,21 +198,22 @@
                             name="data"
                             style="width: 160px"
                             class="form-control pl-2" 
-                            value="<?=  $diarioObra->data->format('Y-m-d') ?>" 
+                            value="<?php echo htmlspecialchars($diarioObra->data->format('Y-m-d')) ?>" 
                             id="data">
                     </div>
                     <div class="form-group w-25">
                         <label for="numeroRelatorio">Nº Relatório:</label>
-                        <input type="text"
+                        <input type="number"
                             name="numero_relatorio"
                             style="width: 100px" 
                             class="form-control" 
-                            value="<?= isset($diarioObra) ? $diarioObra->numero_diario : '' ?>" 
+                            min="1"
+                            value="<?php echo htmlspecialchars(isset($diarioObra) ? $diarioObra->numero_diario : '') ?>" 
                             id="numero_relatorio">
 
                         <input type="hidden"
                             name="id_obra"
-                            value="<?= isset($diarioObra) ? $diarioObra->fk_id_obra : 0 ?>">
+                            value="<?php echo htmlspecialchars(isset($diarioObra) ? $diarioObra->fk_id_obra : 0) ?>">
                     </div>
                 </div>
 
@@ -131,17 +224,17 @@
                     </div>
                 </div>
             </form>
+            <?php endif; ?>
             
 
-            <? require_once __DIR__ . '/listaDiarioObras.php' ?>
+            <?php require_once __DIR__ . '/listaDiarioObras.php' ?>
         </div>
     </body>
 
 </html>
 
-<? if (isset($_GET['sucesso']) && $_GET['sucesso'] == 0) { ?>
+<?php if (isset($_GET['sucesso']) && $_GET['sucesso'] == 0) { ?>
     <script>
         alert("RDO com a mesmo número já foi cadastrado para esta obra");
     </script>
-<? } ?>
-
+<?php } ?>

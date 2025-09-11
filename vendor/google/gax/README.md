@@ -1,10 +1,8 @@
 # Google API Core for PHP
 
-[![Build Status](https://api.travis-ci.org/googleapis/gax-php.svg?branch=master)](https://travis-ci.org/googleapis/gax-php)
+![Build Status](https://github.com/googleapis/gax-php/actions/workflows/tests.yml/badge.svg)
 
-[![Code Coverage](https://img.shields.io/codecov/c/github/googleapis/gax-php.svg)](https://codecov.io/github/googleapis/gax-php)
-
--   [Documentation](http://googleapis.github.io/gax-php)
+-   [Documentation](https://cloud.google.com/php/docs/reference/gax/latest)
 
 Google API Core for PHP (gax-php) is a set of modules which aids the development
 of APIs for clients based on [gRPC][] and Google API conventions.
@@ -19,7 +17,7 @@ more convenient and idiomatic API surface to callers.
 
 ## PHP Versions
 
-gax-php currently requires PHP 5.5 or higher.
+gax-php currently requires PHP 8.0 or higher.
 
 ## Contributing
 
@@ -28,7 +26,7 @@ Contributions to this library are always welcome and highly encouraged.
 See the [CONTRIBUTING][] documentation for more information on how to get
 started.
 
-[CONTRIBUTING]: https://github.com/googleapis/gax-php/blob/master/.github/CONTRIBUTING.md
+[CONTRIBUTING]: https://github.com/googleapis/gax-php/blob/main/.github/CONTRIBUTING.md
 
 ## Versioning
 
@@ -69,31 +67,31 @@ be found for Mac or Windows.
 
     ```sh
     > cd /path/to/gax-php
-    > cp ~/composer.phar ./
-    > php composer.phar install
+    > composer install
     ```
 
 3.  Run tests.
 
     ```sh
-    > vendor/bin/phpunit --bootstrap tests/bootstrap.php tests
+    > composer test
     ```
 
 4.  Updating dependencies after changing `composer.json`:
 
     ```sh
-    > php composer.phar update
+    > composer update
     `
     ```
 
 5.  Formatting source:
 
     ```sh
-    > vendor/bin/phpcbf -s --standard=./ruleset.xml
+    > composer cs-lint
+    > composer cs-fix
     ```
 
 ## License
 
 BSD - See [LICENSE][] for more information.
 
-[LICENSE]: https://github.com/googleapis/gax-php/blob/master/LICENSE
+[LICENSE]: https://github.com/googleapis/gax-php/blob/main/LICENSE

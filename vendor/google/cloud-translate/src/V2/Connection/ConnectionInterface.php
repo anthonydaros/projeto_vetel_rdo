@@ -17,27 +17,34 @@
 
 namespace Google\Cloud\Translate\V2\Connection;
 
+use Google\Cloud\Core\Exception\ServiceException;
+
 /**
  * Represents a connection to
  * [Google Cloud Translation](https://cloud.google.com/translation/).
+ * 
+ * @internal
  */
 interface ConnectionInterface
 {
     /**
      * @param array $args
      * @return array
+     * @throws ServiceException
      */
     public function listDetections(array $args = []);
 
     /**
      * @param array $args
      * @return array
+     * @throws ServiceException
      */
     public function listLanguages(array $args = []);
 
     /**
      * @param array $args
      * @return array
+     * @throws ServiceException
      */
     public function listTranslations(array $args = []);
 }

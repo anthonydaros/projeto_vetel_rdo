@@ -18,12 +18,17 @@
 namespace Google\Cloud\Core;
 
 use Google\Auth\FetchAuthTokenInterface;
+use Google\Auth\GetQuotaProjectInterface;
+use Google\Auth\UpdateMetadataInterface;
 
 /**
  * Provides an anonymous set of credentials, which is useful for APIs which do
  * not require authentication.
  */
-class AnonymousCredentials implements FetchAuthTokenInterface
+class AnonymousCredentials implements
+    FetchAuthTokenInterface,
+    UpdateMetadataInterface,
+    GetQuotaProjectInterface
 {
     /**
      * @var array
@@ -38,7 +43,7 @@ class AnonymousCredentials implements FetchAuthTokenInterface
      * @param callable $httpHandler
      * @return array
      */
-    public function fetchAuthToken(callable $httpHandler = null)
+    public function fetchAuthToken(?callable $httpHandler = null)
     {
         return $this->token;
     }
@@ -63,5 +68,31 @@ class AnonymousCredentials implements FetchAuthTokenInterface
     public function getLastReceivedToken()
     {
         return $this->token;
+    }
+
+    /**
+     * This method has no effect for AnonymousCredentials.
+     *
+     * @param array $metadata metadata hashmap
+     * @param string $authUri optional auth uri
+     * @param callable $httpHandler callback which delivers psr7 request
+     * @return array updated metadata hashmap
+     */
+    public function updateMetadata(
+        $metadata,
+        $authUri = null,
+        ?callable $httpHandler = null
+    ) {
+        return $metadata;
+    }
+
+    /**
+     * This method always returns null for AnonymousCredentials.
+     *
+     * @return string|null
+     */
+    public function getQuotaProject()
+    {
+        return null;
     }
 }

@@ -17,6 +17,7 @@
 
 namespace Google\Cloud\Translate\V2\Connection;
 
+use Google\Cloud\Core\Exception\ServiceException;
 use Google\Cloud\Core\RequestBuilder;
 use Google\Cloud\Core\RequestWrapper;
 use Google\Cloud\Core\RestTrait;
@@ -26,6 +27,8 @@ use Google\Cloud\Translate\V2\TranslateClient;
 /**
  * Implementation of the
  * [Google Cloud Translation REST API](https://cloud.google.com/translation/docs/how-to).
+ * 
+ * @internal
  */
 class Rest implements ConnectionInterface
 {
@@ -59,6 +62,7 @@ class Rest implements ConnectionInterface
     /**
      * @param array $args
      * @return array
+     * @throws ServiceException
      */
     public function listDetections(array $args = [])
     {
@@ -68,6 +72,7 @@ class Rest implements ConnectionInterface
     /**
      * @param array $args
      * @return array
+     * @throws ServiceException
      */
     public function listLanguages(array $args = [])
     {
@@ -77,6 +82,7 @@ class Rest implements ConnectionInterface
     /**
      * @param array $args
      * @return array
+     * @throws ServiceException
      */
     public function listTranslations(array $args = [])
     {

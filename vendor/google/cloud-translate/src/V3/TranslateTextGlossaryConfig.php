@@ -9,27 +9,36 @@ use Google\Protobuf\Internal\RepeatedField;
 use Google\Protobuf\Internal\GPBUtil;
 
 /**
- * Configures which glossary should be used for a specific target language,
- * and defines options for applying that glossary.
+ * Configures which glossary is used for a specific target language and defines
+ * options for applying that glossary.
  *
  * Generated from protobuf message <code>google.cloud.translation.v3.TranslateTextGlossaryConfig</code>
  */
 class TranslateTextGlossaryConfig extends \Google\Protobuf\Internal\Message
 {
     /**
-     * Required. Specifies the glossary used for this translation. Use
-     * this format: projects/&#42;&#47;locations/&#42;&#47;glossaries/&#42;
+     * Required. The `glossary` to be applied for this translation.
+     * The format depends on the glossary:
+     * - User-provided custom glossary:
+     *   `projects/{project-number-or-id}/locations/{location-id}/glossaries/{glossary-id}`
      *
-     * Generated from protobuf field <code>string glossary = 1 [(.google.api.field_behavior) = REQUIRED];</code>
+     * Generated from protobuf field <code>string glossary = 1 [(.google.api.field_behavior) = REQUIRED, (.google.api.resource_reference) = {</code>
      */
     private $glossary = '';
     /**
-     * Optional. Indicates match is case-insensitive.
-     * Default value is false if missing.
+     * Optional. Indicates match is case insensitive. The default value is `false`
+     * if missing.
      *
      * Generated from protobuf field <code>bool ignore_case = 2 [(.google.api.field_behavior) = OPTIONAL];</code>
      */
     private $ignore_case = false;
+    /**
+     * Optional. If set to true, the glossary will be used for contextual
+     * translation.
+     *
+     * Generated from protobuf field <code>bool contextual_translation_enabled = 4 [(.google.api.field_behavior) = OPTIONAL];</code>
+     */
+    private $contextual_translation_enabled = false;
 
     /**
      * Constructor.
@@ -38,11 +47,16 @@ class TranslateTextGlossaryConfig extends \Google\Protobuf\Internal\Message
      *     Optional. Data for populating the Message object.
      *
      *     @type string $glossary
-     *           Required. Specifies the glossary used for this translation. Use
-     *           this format: projects/&#42;&#47;locations/&#42;&#47;glossaries/&#42;
+     *           Required. The `glossary` to be applied for this translation.
+     *           The format depends on the glossary:
+     *           - User-provided custom glossary:
+     *             `projects/{project-number-or-id}/locations/{location-id}/glossaries/{glossary-id}`
      *     @type bool $ignore_case
-     *           Optional. Indicates match is case-insensitive.
-     *           Default value is false if missing.
+     *           Optional. Indicates match is case insensitive. The default value is `false`
+     *           if missing.
+     *     @type bool $contextual_translation_enabled
+     *           Optional. If set to true, the glossary will be used for contextual
+     *           translation.
      * }
      */
     public function __construct($data = NULL) {
@@ -51,10 +65,12 @@ class TranslateTextGlossaryConfig extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Required. Specifies the glossary used for this translation. Use
-     * this format: projects/&#42;&#47;locations/&#42;&#47;glossaries/&#42;
+     * Required. The `glossary` to be applied for this translation.
+     * The format depends on the glossary:
+     * - User-provided custom glossary:
+     *   `projects/{project-number-or-id}/locations/{location-id}/glossaries/{glossary-id}`
      *
-     * Generated from protobuf field <code>string glossary = 1 [(.google.api.field_behavior) = REQUIRED];</code>
+     * Generated from protobuf field <code>string glossary = 1 [(.google.api.field_behavior) = REQUIRED, (.google.api.resource_reference) = {</code>
      * @return string
      */
     public function getGlossary()
@@ -63,10 +79,12 @@ class TranslateTextGlossaryConfig extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Required. Specifies the glossary used for this translation. Use
-     * this format: projects/&#42;&#47;locations/&#42;&#47;glossaries/&#42;
+     * Required. The `glossary` to be applied for this translation.
+     * The format depends on the glossary:
+     * - User-provided custom glossary:
+     *   `projects/{project-number-or-id}/locations/{location-id}/glossaries/{glossary-id}`
      *
-     * Generated from protobuf field <code>string glossary = 1 [(.google.api.field_behavior) = REQUIRED];</code>
+     * Generated from protobuf field <code>string glossary = 1 [(.google.api.field_behavior) = REQUIRED, (.google.api.resource_reference) = {</code>
      * @param string $var
      * @return $this
      */
@@ -79,8 +97,8 @@ class TranslateTextGlossaryConfig extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Optional. Indicates match is case-insensitive.
-     * Default value is false if missing.
+     * Optional. Indicates match is case insensitive. The default value is `false`
+     * if missing.
      *
      * Generated from protobuf field <code>bool ignore_case = 2 [(.google.api.field_behavior) = OPTIONAL];</code>
      * @return bool
@@ -91,8 +109,8 @@ class TranslateTextGlossaryConfig extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Optional. Indicates match is case-insensitive.
-     * Default value is false if missing.
+     * Optional. Indicates match is case insensitive. The default value is `false`
+     * if missing.
      *
      * Generated from protobuf field <code>bool ignore_case = 2 [(.google.api.field_behavior) = OPTIONAL];</code>
      * @param bool $var
@@ -102,6 +120,34 @@ class TranslateTextGlossaryConfig extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkBool($var);
         $this->ignore_case = $var;
+
+        return $this;
+    }
+
+    /**
+     * Optional. If set to true, the glossary will be used for contextual
+     * translation.
+     *
+     * Generated from protobuf field <code>bool contextual_translation_enabled = 4 [(.google.api.field_behavior) = OPTIONAL];</code>
+     * @return bool
+     */
+    public function getContextualTranslationEnabled()
+    {
+        return $this->contextual_translation_enabled;
+    }
+
+    /**
+     * Optional. If set to true, the glossary will be used for contextual
+     * translation.
+     *
+     * Generated from protobuf field <code>bool contextual_translation_enabled = 4 [(.google.api.field_behavior) = OPTIONAL];</code>
+     * @param bool $var
+     * @return $this
+     */
+    public function setContextualTranslationEnabled($var)
+    {
+        GPBUtil::checkBool($var);
+        $this->contextual_translation_enabled = $var;
 
         return $this;
     }

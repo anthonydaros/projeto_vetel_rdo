@@ -1,11 +1,13 @@
 <?php
     require_once __DIR__ . '/startup.php';
-   require_once __DIR__ . '/ftpFunctions.php';
+    require_once __DIR__ . '/ftpFunctions.php';
+    require_once __DIR__ . '/auth/CSRF.php';
     
     use Models\Empresa;
     use Models\Funcionario;
     use Models\FuncionarioDiarioObra;
     use Models\Obra;
+    use Auth\CSRF;
 
     if (isset($_FILES['file']) && !empty($_FILES['file'])) 
     {
@@ -22,6 +24,12 @@
     }
     else if (isset($_POST['submit']))
     {
+        // Verify CSRF token
+        if (!CSRF::verifyPost()) {
+            header("Location: cadastroEmpresa.php?error=invalid_token");
+            exit;
+        }
+        
         $nomeFantasia = isset($_POST['nomeFantasia']) ? trim($_POST['nomeFantasia']) : '';
         $contratanteSn = isset($_POST['contratanteSn']) ? $_POST['contratanteSn'] : 0;
         $buscaEmpresa = $dao->buscaEmpresaPorNome($nomeFantasia);
@@ -50,11 +58,22 @@
     }
     else if(isset($_GET['remover']))
     {
-        $empresa = $dao->buscaEmpresaPorId($_GET['remover']);
-        $urlLogo = $empresa->url_logo ? $empresa->url_logo : '';
-        unlink($urlLogo);
+        // Input validation for GET parameter
+        $id = filter_var($_GET['remover'], FILTER_VALIDATE_INT);
+        if ($id === false || $id <= 0) {
+            header('Location: cadastroEmpresa.php?error=invalid_id');
+            exit;
+        }
         
-        $removido = $dao->deleteEmpresa($empresa);
+        $empresa = $dao->buscaEmpresaPorId($id);
+        if ($empresa) {
+            $urlLogo = $empresa->url_logo ? $empresa->url_logo : '';
+            if ($urlLogo && file_exists($urlLogo)) {
+                unlink($urlLogo);
+            }
+            
+            $removido = $dao->deleteEmpresa($empresa);
+        }
         
         header('Location: cadastroEmpresa.php');
     }
@@ -136,7 +155,7 @@
             <h1 class="h3 text-center my-3">Cadastro de Empresa</h1>
 
             <form class="w-75 mx-auto my-4" 
-                action="<?= htmlspecialchars($_SERVER['PHP_SELF']) ?>"
+                action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>"
                 method="POST"
                 id="form"
                 enctype="multipart/form-data">
@@ -145,17 +164,23 @@
                     <label for="nomeFantasia">Nome Fantasia:</label>
                     <input type="text" name="nomeFantasia" id="nomeFantasia" class="form-control">
                 
-                    <? if (isset($_GET['sucesso']) && $_GET['sucesso'] == 1) { ?>
+                    <?php if (isset($_GET['sucesso']) && $_GET['sucesso'] == 1) { ?>
                         <script>
                             alert('Empresa cadastrada com sucesso!')
                             var newURL = location.href.split("?")[0];
                             window.history.pushState('object', document.title, newURL);
                             location.reload(true)       
                         </script>
-                    <? } ?>
-                    <? if (isset($_GET['sucesso']) && $_GET['sucesso'] == 0) { ?>
+                    <?php } ?>
+                    <?php if (isset($_GET['sucesso']) && $_GET['sucesso'] == 0) { ?>
                         <p class="small text-danger">Empresa com esse nome já consta na base de dados!</p>
-                    <? } ?>
+                    <?php } ?>
+                    <?php if (isset($_GET['error']) && $_GET['error'] == 'invalid_id') { ?>
+                        <p class="small text-danger">ID inválido fornecido.</p>
+                    <?php } ?>
+                    <?php if (isset($_GET['error']) && $_GET['error'] == 'invalid_token') { ?>
+                        <p class="small text-danger">Token de segurança inválido.</p>
+                    <?php } ?>
                 
                 </div>
 
@@ -175,6 +200,8 @@
                     <p class="small text-secondary mt-2">(Marque o checkbox acima apenas caso a empresa for a contratante)</p>
                 </div>
 
+                <?php echo CSRF::getTokenField(); ?>
+
                 <button 
                     name="submit"
                     id="submit"
@@ -187,7 +214,7 @@
         <script>   
             $(".dropzone#logo").dropzone(
                 { 
-                    url: "<?= $_SERVER['PHP_SELF'] ?>",
+                    url: "<?php echo $_SERVER['PHP_SELF']; ?>",
                     method: 'POST',
                     init: function()
                     {
@@ -236,7 +263,7 @@
             })
         </script>
 
-        <? require_once __DIR__ . '/listaEmpresas.php' ?>
+        <?php require_once __DIR__ . '/listaEmpresas.php'; ?>
     </body>
     
 </html>
