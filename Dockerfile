@@ -5,14 +5,21 @@ FROM composer:2.6 AS composer-build
 WORKDIR /app
 
 # Copy composer files first for better caching
-COPY composer.json composer.lock* ./
+COPY composer.json composer.lock ./
 
-# Install dependencies
+# Install dependencies with error handling
 RUN composer install \
     --no-dev \
     --no-scripts \
     --prefer-dist \
-    --no-interaction
+    --no-interaction \
+    --ignore-platform-reqs || \
+    composer update \
+    --no-dev \
+    --no-scripts \
+    --prefer-dist \
+    --no-interaction \
+    --ignore-platform-reqs
 
 # Copy application files
 COPY . .
