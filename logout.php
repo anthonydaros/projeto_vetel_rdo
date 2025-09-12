@@ -1,4 +1,5 @@
 <?php
+
 require_once __DIR__ . '/auth/Auth.php';
 
 use Auth\Auth;

@@ -1,42 +1,124 @@
 <?php
-    $daysOfWeekend = ['Sat' => 'Sábado', 'Sun' => 'Domingo'];
-    $meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
-    // Feriados Nacionais - 2021
-    $feriados = [
-        '01-01-2021' =>	'Confraternização Universal',
-        '15-02-2021' => 'Carnaval',
+/**
+ * Holiday and weekend management for RDP reports
+ */
+class HolidayManager
+{
+	private const WEEKEND_DAYS = [
+		'Sat' => 'Sábado',
+		'Sun' => 'Domingo'
+	];
+
+	private const MONTHS = [
+		'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+		'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+	];
+
+	// National holidays - should be updated yearly or moved to database
+	private const HOLIDAYS = [
+		'01-01-2021' => 'Confraternização Universal',
+		'15-02-2021' => 'Carnaval',
 		'16-02-2021' => 'Carnaval',
-        '02-04-2021' => 'Sexta-Feira Santa',
-        '21-04-2021' => 'Tiradentes',
-        '01-05-2021' => 'Dia do Trabalho',
-        '03-06-2021' => 'Corpus Christi',
+		'02-04-2021' => 'Sexta-Feira Santa',
+		'21-04-2021' => 'Tiradentes',
+		'01-05-2021' => 'Dia do Trabalho',
+		'03-06-2021' => 'Corpus Christi',
 		'07-09-2021' => 'Dia da Independência',
 		'12-10-2021' => 'Nossa Sr.a Aparecida',
 		'02-11-2021' => 'Finados',
 		'15-11-2021' => 'Proclamação da República',
 		'20-11-2021' => 'Consciência Negra',
-	    '25-12-2021' => 'Natal'
-    ];
+		'25-12-2021' => 'Natal'
+	];
 
-    function getDayOfWeekend($d, $m, $y)
-    {
-        $timestamp = mktime(0, 0, 0, $m, $d, $y);
-        $dayOfWeek = date('D', $timestamp);
-        $daysOfWeekend = $GLOBALS['daysOfWeekend'];
+	/**
+	 * Get weekend day name in Portuguese or empty string
+	 */
+	public static function getWeekendDay(int $day, int $month, int $year): string
+	{
+		$timestamp = mktime(0, 0, 0, $month, $day, $year);
+		$dayOfWeek = date('D', $timestamp);
 
-        if (isset($daysOfWeekend[$dayOfWeek]))
-        {
-            return $daysOfWeekend[$dayOfWeek];
-        }
-        return '';
-    }
+		return self::WEEKEND_DAYS[$dayOfWeek] ?? '';
+	}
 
-    function numberWithTwoDigits($number)
-    {
-        $formatedNumber = sprintf("%'.02d", $number);
+	/**
+	 * Check if given date is a holiday
+	 */
+	public static function isHoliday(int $day, int $month, int $year): ?string
+	{
+		$dateKey = sprintf('%02d-%02d-%04d', $day, $month, $year);
+		return self::HOLIDAYS[$dateKey] ?? null;
+	}
 
-        return $formatedNumber;
-    }
+	/**
+	 * Get month name in Portuguese
+	 */
+	public static function getMonthName(int $monthNumber): string
+	{
+		return self::MONTHS[$monthNumber - 1] ?? '';
+	}
+
+	/**
+	 * Get formatted observation for date (weekend/holiday)
+	 */
+	public static function getDateObservation(int $day, int $month, int $year): string
+	{
+		$observations = [];
+
+		$weekendDay = self::getWeekendDay($day, $month, $year);
+		if ($weekendDay) {
+			$observations[] = $weekendDay;
+		}
+
+		$holiday = self::isHoliday($day, $month, $year);
+		if ($holiday) {
+			$observations[] = 'FERIADO';
+		}
+
+		return implode(' / ', $observations);
+	}
+}
+
+/**
+ * Formats number with leading zeros
+ */
+function formatWithTwoDigits(int $number): string
+{
+	return sprintf('%02d', $number);
+}
+
+/**
+ * Formats hour display with appropriate decimal places
+ */
+function formatHours(float $hours): string
+{
+	if ($hours === floor($hours)) {
+		return number_format($hours, 0, ',', '.') . 'h';
+	}
+
+	if (($hours * 10) === floor($hours * 10)) {
+		return number_format($hours, 1, ',', '.') . 'h';
+	}
+
+	return number_format($hours, 2, ',', '.') . 'h';
+}
+
+// Legacy function aliases for backward compatibility
+function getDayOfWeekend($d, $m, $y)
+{
+	return HolidayManager::getWeekendDay($d, $m, $y);
+}
+
+function numberWithTwoDigits($number)
+{
+	return formatWithTwoDigits($number);
+}
+
+// Legacy global variables for backward compatibility
+$daysOfWeekend = ['Sat' => 'Sábado', 'Sun' => 'Domingo'];
+$meses = HolidayManager::getMonthName(1) ? array_map(fn ($i) => HolidayManager::getMonthName($i), range(1, 12)) : [];
+$feriados = [];
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -109,7 +191,7 @@
                     <td class="mx-1" style="font-size: 12px !important; line-height: 1.4em">
                         <b>Nome</b>: <?php echo htmlspecialchars($funcionario->nome) ?> </br>
                         <b>Cargo</b>: <?php echo htmlspecialchars($funcionario->cargo) ?> </br>
-                        <b>Período</b>: <?php echo htmlspecialchars($meses[$mes_ano[1]-1]) ?> de <?php echo htmlspecialchars($mes_ano[0]) ?></br>
+                        <b>Período</b>: <?php echo htmlspecialchars(HolidayManager::getMonthName($mes_ano[1])) ?> de <?php echo htmlspecialchars($mes_ano[0]) ?></br>
                     </td>
                 </tr>
             </table>
@@ -139,39 +221,17 @@
                                 <td style="padding: 0.2em 0.3em !important; max-height: 0em !important;" class="my-0 py-0 text-uppercase"><?php echo htmlspecialchars((new DateTime($diario['data']))->format('d/m/Y')) ?></td>
                                 <td style="padding: 0.2em 0.3em !important; max-height: 0em !important;" class="my-0 py-0 text-uppercase"><?php echo htmlspecialchars($diario['horario_trabalho']) ?></td>
                                 <td style="padding: 0.2em !important; max-height: 0em !important;" class="my-0 py-0 text-uppercase">
-                                    <?php
-                                        if ($diario['horas_trabalhadas'] * 10 - floor($diario['horas_trabalhadas'] * 10))
-                                        {
-                                            echo number_format($diario['horas_trabalhadas'], 2, ',', '.');
-                                        }
-                                        else
-                                        {
-                                            echo number_format($diario['horas_trabalhadas'], 1, ',', '.');
-                                        }
-                                    ?>
+                                    <?php echo rtrim(number_format($diario['horas_trabalhadas'], 2, ',', '.'), '0'); ?>
                                 </td>
                                 <td style="padding: 0.2em 0 !important; max-height: 0em !important; max-width: 5px !important" class="my-0 py-0 text-uppercase">
                                     <?php
-                                        $data = explode('-', $diario['data']);
+										$dateComponents = explode('-', $diario['data']);
+                        	$day = (int) $dateComponents[2];
+                        	$month = (int) $dateComponents[1];
+                        	$year = (int) $dateComponents[0];
 
-                                        $d = numberWithTwoDigits($data[2]);
-                                        $m = numberWithTwoDigits($data[1]);
-                                        $y = $data[0];
-
-                                        $dayOfWeekend = getDayOfWeekend($d, $m, $y);
-                                        
-                                        echo $dayOfWeekend;
-
-                                        $key = "$d-$m-$y";
-                                        
-                                        if (isset($feriados[$key]))
-                                        {
-                                            if ($dayOfWeekend)
-                                                echo ' / ';
-
-                                            echo "FERIADO";
-                                        } 
-                                    ?>
+                        	echo HolidayManager::getDateObservation($day, $month, $year);
+                        	?>
                                 </td>
                             </tr>
                         <?php } ?>
@@ -186,27 +246,12 @@
                     </td>
                     <td class="text-center mx-1 my-0 py-0" style="border-top:0; border-left: 2px solid #222 !important; font-size: 12px !important; ">
                         <?php
-                            $sum = array_reduce($listaDiariosObra, function($carry, $item) {
-                                return $carry + $item['horas_trabalhadas'];
-                            });
+							$totalHours = array_reduce($listaDiariosObra, function ($carry, $item) {
+								return $carry + $item['horas_trabalhadas'];
+							}, 0);
 
-                            if ($sum - floor($sum))
-                            {
-                                if ($sum * 10 - floor($sum * 10))
-                                {
-                                    echo number_format($sum, 2, ',', '.') . 'h';
-                                }
-                                else
-                                {
-                                    echo number_format($sum, 1, ',', '.') . 'h';
-                                }
-                            }
-                            else
-                            {
-                                echo number_format($sum, 0, ',', '.') . 'h';
-                            }
-                            
-                        ?>
+echo formatHours($totalHours);
+?>
                     </td>
                 </tr>
             </table>

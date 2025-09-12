@@ -1,208 +1,183 @@
 <?php
-    require_once __DIR__ . '/bootstrap.php'; // Nova arquitetura
-    require_once __DIR__ . '/ftpFunctions.php';
-    
-    use Models\Empresa;
-    use Models\Funcionario;
-    use Models\FuncionarioDiarioObra;
-    use Models\DiarioObra;
-    use Models\Obra;
-    use Dompdf\Dompdf;
-    use Src\Service\ImageUploadService;
-    use Src\Exception\ServiceException;
-    
-    // Nova lógica de upload de imagens
-    if (isset($_FILES['file']) && isset($_POST['id_diario_obra'])) {
-        try {
-            $imageUploadService = app('image.upload');
-            $diarioId = (int) $_POST['id_diario_obra'];
-            
-            // Processo de upload usando nova arquitetura
-            $result = $imageUploadService->uploadImageForDiario($_FILES['file'], $diarioId);
-            
-            // Resposta para Dropzone
-            header('Content-Type: application/json');
-            echo json_encode([
-                'success' => true,
-                'message' => 'Imagem enviada com sucesso',
-                'image_id' => $result['image_id'],
-                'filename' => $result['filename']
-            ]);
-            exit;
-            
-        } catch (ServiceException $e) {
-            header('HTTP/1.1 400 Bad Request');
-            header('Content-Type: application/json');
-            echo json_encode([
-                'success' => false,
-                'error' => $e->getUserMessage()
-            ]);
-            exit;
-        }
-    }
-    
-    if (isset($_GET['id_diario_obra']))
-    {
-        $diarioObra = $dao->buscaDiarioObraPorId($_GET['id_diario_obra']);
-        $album = $dao->buscaAlbumDiario($_GET['id_diario_obra']);
+require_once __DIR__ . '/bootstrap.php'; // Nova arquitetura
+require_once __DIR__ . '/ftpFunctions.php';
 
-        if (isset($_GET['baixar_album']) && $_GET['baixar_album'] == 1)
-        {
-            $sourcePath = __DIR__.'/img/album-copy';
-            $zipPath = __DIR__.'/img/album.zip';
+use Src\Exception\ServiceException;
 
-            if (!file_exists($sourcePath))
-            {
-                mkdir($sourcePath, 0777, true);
-            }
+// Nova lógica de upload de imagens
+if (isset($_FILES['file']) && isset($_POST['id_diario_obra'])) {
+	try {
+		$imageUploadService = app('image.upload');
+		$diarioId = (int) $_POST['id_diario_obra'];
 
-            $i = 0;
-            foreach ($album as $foto)
-            {
-                $arr = explode('.', $foto['url']);
-                $extensao = $arr[count($arr)-1];
+		// Processo de upload usando nova arquitetura
+		$result = $imageUploadService->uploadImageForDiario($_FILES['file'], $diarioId);
 
-                copyFileFromTo($foto['url'], "$sourcePath/foto-$i.$extensao");
-                $i++;
-            }
+		// Resposta para Dropzone
+		header('Content-Type: application/json');
+		echo json_encode([
+			'success' => true,
+			'message' => 'Imagem enviada com sucesso',
+			'image_id' => $result['image_id'],
+			'filename' => $result['filename']
+		]);
+		exit;
+	} catch (ServiceException $e) {
+		header('HTTP/1.1 400 Bad Request');
+		header('Content-Type: application/json');
+		echo json_encode([
+			'success' => false,
+			'error' => $e->getUserMessage()
+		]);
+		exit;
+	}
+}
 
-            zipFolder($sourcePath, $zipPath);
-            downloadFile($zipPath);
-            
-            cleanDir($sourcePath);
-            rmdir($sourcePath);
-            unlink($zipPath);
+if (isset($_GET['id_diario_obra'])) {
+	$diarioObra = $dao->buscaDiarioObraPorId($_GET['id_diario_obra']);
+	$album = $dao->buscaAlbumDiario($_GET['id_diario_obra']);
 
-            header("Location: coletorDados.php?id_diario_obra={$_GET['id_diario_obra']}");
+	if (isset($_GET['baixar_album']) && $_GET['baixar_album'] == 1) {
+		$sourcePath = __DIR__ . '/img/album-copy';
+		$zipPath = __DIR__ . '/img/album.zip';
 
-            die();
-        }
-        else if (isset($_GET['remover_album']) && $_GET['remover_album'] == 1)
-        {
-            try {
-                $imageUploadService = app('image.upload');
-                $diarioId = (int) $_GET['id_diario_obra'];
-                
-                // Remove todas as imagens usando nova arquitetura
-                $result = $imageUploadService->deleteAllImagesFromDiario($diarioId);
-                
-                // Fallback: remove imagens restantes do modo legacy
-                foreach ($album as $foto) {
-                    if (file_exists($foto['url'])) {
-                        unlink($foto['url']);
-                    }
-                }
-                
-                // Remove registros legacy do banco
-                $dao->deleteAlbum($diarioId);
-                
-            } catch (ServiceException $e) {
-                // Em caso de erro, usa método legacy
-                foreach ($album as $foto) {
-                    if (file_exists($foto['url'])) {
-                        unlink($foto['url']);
-                    }
-                }
-                $dao->deleteAlbum($_GET['id_diario_obra']);
-            }
+		if (!file_exists($sourcePath)) {
+			mkdir($sourcePath, 0777, true);
+		}
 
-            header("Location: coletorDados.php?id_diario_obra={$_GET['id_diario_obra']}");
-            exit;
-        }
-    
-        $contratante = $dao->buscaEmpresaPorId($diarioObra->fk_id_contratante);
+		$i = 0;
+		foreach ($album as $foto) {
+			$arr = explode('.', $foto['url']);
+			$extensao = $arr[count($arr) - 1];
 
-        $contratada = $dao->buscaEmpresaPorId($diarioObra->fk_id_contratada);
-        
-        $listaFuncionarios = $dao->buscaTodosFuncionariosJoinEmpresa();
+			copyFileFromTo($foto['url'], "$sourcePath/foto-$i.$extensao");
+			$i++;
+		}
 
-        $listaServicos = $dao->buscaTodosServicosDoDiarioObra($_GET['id_diario_obra']);
+		zipFolder($sourcePath, $zipPath);
+		downloadFile($zipPath);
 
-        $funcionarioDiarioObra = $dao->buscaFuncionariosDoDiarioDeObra($_GET['id_diario_obra']);
-    }
-    else if (isset($_GET['funcionario']))
-    {
-        $nomeFuncionario = trim($_GET['funcionario']);
-        $result = $dao->pesquisaListaFuncionariosPorNome($nomeFuncionario);
+		cleanDir($sourcePath);
+		rmdir($sourcePath);
+		unlink($zipPath);
 
-        if ($result)
-        {
-            echo json_encode($result);
-        }
-        die();
-    }
-    else
-    {
-        header("Location: cadastroObra.php");
-    }
+		header("Location: coletorDados.php?id_diario_obra={$_GET['id_diario_obra']}");
 
-    function cleanDir($dirPath)
-    {
-        $handle = opendir($dirPath);
-        while (false !== ($entry = readdir($handle))) 
-        {
-            if (!is_dir("$dirPath/$entry"))
-            {
-                unlink("$dirPath/$entry");
-            }
-        }
-        closedir($handle);
-    }
+		die();
+	} elseif (isset($_GET['remover_album']) && $_GET['remover_album'] == 1) {
+		try {
+			$imageUploadService = app('image.upload');
+			$diarioId = (int) $_GET['id_diario_obra'];
 
-    function copyFileFromTo($sourceFile, $destFile)
-    {
-        $handle = fopen($sourceFile, "rb");
-        $contents = '';
-        while (!feof($handle)) {
-            $contents .= fread($handle, 8192);
-        }
-        fclose($handle);
+			// Remove todas as imagens usando nova arquitetura
+			$result = $imageUploadService->deleteAllImagesFromDiario($diarioId);
 
-        if (!$handle = fopen($destFile, 'wb')) {
-            exit("Não foi possível abrir o arquivo ($destFile)");
-        }
-        if (fwrite($handle, $contents) === false) {
-            exit("Não foi possível escrever no arquivo ($destFile)");
-        }
-        fclose($handle);
-    }
+			// Fallback: remove imagens restantes do modo legacy
+			foreach ($album as $foto) {
+				if (file_exists($foto['url'])) {
+					unlink($foto['url']);
+				}
+			}
 
-    function zipFolder($sourcePath, $pathZip)
-    {
-        $rootPath = realpath($sourcePath);
-        $zip = new ZipArchive();
-        $zip->open($pathZip, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+			// Remove registros legacy do banco
+			$dao->deleteAlbum($diarioId);
+		} catch (ServiceException $e) {
+			// Em caso de erro, usa método legacy
+			foreach ($album as $foto) {
+				if (file_exists($foto['url'])) {
+					unlink($foto['url']);
+				}
+			}
+			$dao->deleteAlbum($_GET['id_diario_obra']);
+		}
 
-        $handle = opendir($sourcePath);
-        while (false !== ($entry = readdir($handle))) 
-        {
-            if (!is_dir("$sourcePath/$entry"))
-            {
-                $filePath = realpath("$sourcePath/$entry");
-                $relativePath = substr($filePath, strlen($rootPath)+1);
+		header("Location: coletorDados.php?id_diario_obra={$_GET['id_diario_obra']}");
+		exit;
+	}
 
-                $zip->addFile($filePath, $relativePath);
-            }
-        }
-        closedir($handle);
-        
-        $zip->close();
-    }
+	$contratante = $dao->buscaEmpresaPorId($diarioObra->fk_id_contratante);
 
-    function downloadFile($localFile)
-    {
-        if (file_exists($localFile))
-        {
-            header('Content-Description: File Transfer');
-            header('Content-Type: application/octet-stream');
-            header('Content-Disposition: attachment; filename="'.basename($localFile).'"');
-            header('Expires: 0');
-            header('Cache-Control: must-revalidate');
-            header('Pragma: public');
-            header('Content-Length: ' . filesize($localFile));
-            readfile($localFile);
-        }
-    }
+	$contratada = $dao->buscaEmpresaPorId($diarioObra->fk_id_contratada);
+
+	$listaFuncionarios = $dao->buscaTodosFuncionariosJoinEmpresa();
+
+	$listaServicos = $dao->buscaTodosServicosDoDiarioObra($_GET['id_diario_obra']);
+
+	$funcionarioDiarioObra = $dao->buscaFuncionariosDoDiarioDeObra($_GET['id_diario_obra']);
+} elseif (isset($_GET['funcionario'])) {
+	$nomeFuncionario = trim($_GET['funcionario']);
+	$result = $dao->pesquisaListaFuncionariosPorNome($nomeFuncionario);
+
+	if ($result) {
+		echo json_encode($result);
+	}
+	die();
+} else {
+	header('Location: cadastroObra.php');
+}
+
+function cleanDir($dirPath)
+{
+	$handle = opendir($dirPath);
+	while (false !== ($entry = readdir($handle))) {
+		if (!is_dir("$dirPath/$entry")) {
+			unlink("$dirPath/$entry");
+		}
+	}
+	closedir($handle);
+}
+
+function copyFileFromTo($sourceFile, $destFile)
+{
+	$handle = fopen($sourceFile, 'rb');
+	$contents = '';
+	while (!feof($handle)) {
+		$contents .= fread($handle, 8192);
+	}
+	fclose($handle);
+
+	if (!$handle = fopen($destFile, 'wb')) {
+		exit("Não foi possível abrir o arquivo ($destFile)");
+	}
+	if (fwrite($handle, $contents) === false) {
+		exit("Não foi possível escrever no arquivo ($destFile)");
+	}
+	fclose($handle);
+}
+
+function zipFolder($sourcePath, $pathZip)
+{
+	$rootPath = realpath($sourcePath);
+	$zip = new ZipArchive();
+	$zip->open($pathZip, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+
+	$handle = opendir($sourcePath);
+	while (false !== ($entry = readdir($handle))) {
+		if (!is_dir("$sourcePath/$entry")) {
+			$filePath = realpath("$sourcePath/$entry");
+			$relativePath = substr($filePath, strlen($rootPath) + 1);
+
+			$zip->addFile($filePath, $relativePath);
+		}
+	}
+	closedir($handle);
+
+	$zip->close();
+}
+
+function downloadFile($localFile)
+{
+	if (file_exists($localFile)) {
+		header('Content-Description: File Transfer');
+		header('Content-Type: application/octet-stream');
+		header('Content-Disposition: attachment; filename="' . basename($localFile) . '"');
+		header('Expires: 0');
+		header('Cache-Control: must-revalidate');
+		header('Pragma: public');
+		header('Content-Length: ' . filesize($localFile));
+		readfile($localFile);
+	}
+}
 
 ?>
 <!DOCTYPE html>

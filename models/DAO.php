@@ -1,14 +1,8 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Models;
-
-use Models\Empresa;
-use Models\Funcionario;
-use Models\Servico;
-use Models\FuncionarioDiarioObra;
-use Models\Obra;
-use Models\DiarioObra;
 
 class DAO
 {
@@ -33,7 +27,7 @@ class DAO
 
 	public function insereObra(Obra $obra)
 	{
-		$query = "
+		$query = '
 				insert into obra(
 					fk_id_contratante, 
 					fk_id_contratada, 
@@ -43,11 +37,11 @@ class DAO
 					:fk_id_contratada,
 					:descricao_resumo
 				)
-				";
+				';
 		$stmt = $this->db->prepare($query);
 
 		// $stmt->bindValue(':product_id', $prod->product_id);
-		
+
 		$data = [
 			'fk_id_contratante' => $obra->fk_id_contratante,
 			'fk_id_contratada' => $obra->fk_id_contratada,
@@ -61,7 +55,7 @@ class DAO
 
 	public function insereServico(Servico $servico)
 	{
-		$query = "
+		$query = '
 				insert into servico(
 					fk_id_diario_obra, 
 					descricao
@@ -69,9 +63,9 @@ class DAO
 					:fk_id_diario_obra,
 					:descricao
 				)
-				";
+				';
 		$stmt = $this->db->prepare($query);
-		
+
 		$data = [
 			'fk_id_diario_obra' => $servico->fk_id_diario_obra,
 			'descricao' => $servico->descricao
@@ -84,7 +78,7 @@ class DAO
 
 	public function insereDiarioObra(DiarioObra $diarioObra)
 	{
-		$query = "
+		$query = '
 				insert into diario_obra(
 					numero_diario,
 					fk_id_obra,
@@ -102,7 +96,7 @@ class DAO
 					:carga_horas_dia,
 					:total_horas
 				)
-				";
+				';
 		$stmt = $this->db->prepare($query);
 
 		$data = [
@@ -122,7 +116,7 @@ class DAO
 
 	public function insereEmpresa(Empresa $empresa)
 	{
-		$query = "
+		$query = '
 				insert into empresa(
 					nome_fantasia,
 					contratante_sn,
@@ -132,9 +126,9 @@ class DAO
 					:contratante_sn,
 					:url_logo
 				)
-				";
+				';
 		$stmt = $this->db->prepare($query);
-		
+
 		$data = [
 			'nome_fantasia' => $empresa->nome_fantasia,
 			'contratante_sn' => $empresa->contratante_sn,
@@ -148,7 +142,7 @@ class DAO
 
 	public function insereImagem(Imagem $imagem)
 	{
-		$query = "
+		$query = '
 				insert into imagem(
 					fk_id_diario_obra, 
 					url
@@ -156,9 +150,9 @@ class DAO
 					:fk_id_diario_obra,
 					:url
 				)
-				";
+				';
 		$stmt = $this->db->prepare($query);
-		
+
 		$data = [
 			'fk_id_diario_obra' => $imagem->fk_id_diario_obra,
 			'url' => $imagem->url
@@ -171,7 +165,7 @@ class DAO
 
 	public function insereFuncionario(Funcionario $funcionario)
 	{
-		$query = "
+		$query = '
 				insert into funcionario(
 					fk_id_empresa, 
 					nome,
@@ -181,9 +175,9 @@ class DAO
 					:nome,
 					:cargo
 				)
-				";
+				';
 		$stmt = $this->db->prepare($query);
-		
+
 		$data = [
 			'fk_id_empresa' => $funcionario->fk_id_empresa,
 			'nome' => $funcionario->nome,
@@ -197,7 +191,7 @@ class DAO
 
 	public function insereFuncionarioDiarioObra(FuncionarioDiarioObra $funcionarioDiarioObra)
 	{
-		$query = "
+		$query = '
 				insert into funcionario_diario_obra(
 					fk_id_funcionario, 
 					fk_id_diario_obra,
@@ -211,9 +205,9 @@ class DAO
 					:horario_trabalho,
 					:horas_trabalhadas
 				)
-				";
+				';
 		$stmt = $this->db->prepare($query);
-		
+
 		$data = [
 			'fk_id_funcionario' => $funcionarioDiarioObra->fk_id_funcionario,
 			'fk_id_diario_obra' => $funcionarioDiarioObra->fk_id_diario_obra,
@@ -223,22 +217,22 @@ class DAO
 		];
 
 		$ret = $stmt->execute($data);
-		
+
 		return $this->buscaUltimaInsercao('funcionario_diario_obra', 'id_funcionario_diario_obra');
 	}
 
 	/******************* SELECT *******************/
-	
+
 	public function buscaTodasObras()
 	{
-		$query = "
+		$query = '
 				select * 
 					from 
 				obra
 					order by 
 				id_obra desc
-				";
-		
+				';
+
 		$stmt = $this->db->prepare($query);
 		$stmt->execute();
 
@@ -247,7 +241,7 @@ class DAO
 
 	public function buscaAlbumDiario($idDiarioObra)
 	{
-		$query = "
+		$query = '
 				select * 
 					from 
 				imagem
@@ -255,8 +249,8 @@ class DAO
 				fk_id_diario_obra = :fk_id_diario_obra
 					order by
 				url asc
-				";
-		
+				';
+
 		$stmt = $this->db->prepare($query);
 		$data = [
 			'fk_id_diario_obra' => $idDiarioObra
@@ -268,7 +262,7 @@ class DAO
 
 	public function buscaTodosDiariosDaObra($idObra)
 	{
-		$query = "
+		$query = '
 				select * 
 					from 
 				diario_obra
@@ -280,45 +274,46 @@ class DAO
 				order by
 					data desc,
 					numero_diario desc
-				";
-		
+				';
+
 		$stmt = $this->db->prepare($query);
 		$data = [
 			'id_obra' => $idObra
 		];
 		$stmt->execute($data);
-		
+
 		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
 	}
 
 	public function buscaObraPorId($idObra)
 	{
-		$query = "
+		$query = '
 				select 
 					*
 				from 
 					obra
 				where
 					id_obra = :id_obra
-				";
-		
+				';
+
 		$stmt = $this->db->prepare($query);
 		$data = [
 			'id_obra' => $idObra
 		];
 		$stmt->execute($data);
-		
+
 		$arr = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
-		if (!empty($arr))
-			return (object)$arr[0];
-		
+		if (!empty($arr)) {
+			return (object) $arr[0];
+		}
+
 		return null;
 	}
 
 	public function buscaDiarioObraPorIdObraDataNumero($diarioObra)
 	{
-		$query = "
+		$query = '
 				select 
 					*
 				from 
@@ -327,26 +322,27 @@ class DAO
 					fk_id_obra = :fk_id_obra
 				and
 					numero_diario = :numero_diario
-				";
-		
+				';
+
 		$stmt = $this->db->prepare($query);
 		$data = [
 			'fk_id_obra' => $diarioObra->fk_id_obra,
 			'numero_diario' => $diarioObra->numero_diario
 		];
 		$stmt->execute($data);
-		
+
 		$arr = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
-		if (!empty($arr))
-			return (object)$arr[0];
-		
+		if (!empty($arr)) {
+			return (object) $arr[0];
+		}
+
 		return null;
 	}
 
 	public function buscaDiarioObraPorId($idDiarioObra)
 	{
-		$query = "
+		$query = '
 				select 
 					*
 				from 
@@ -357,32 +353,33 @@ class DAO
 					o.id_obra = fk_id_obra
 				where
 					id_diario_obra = :id_diario_obra
-				";
-		
+				';
+
 		$stmt = $this->db->prepare($query);
 		$data = [
 			'id_diario_obra' => $idDiarioObra
 		];
 		$stmt->execute($data);
-		
+
 		$arr = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
-		if (!empty($arr))
-			return (object)$arr[0];
-		
+		if (!empty($arr)) {
+			return (object) $arr[0];
+		}
+
 		return null;
 	}
 
 	public function buscaTodasEmpresas()
 	{
-		$query = "
+		$query = '
 				select * 
 					from 
 				empresa
 					where 1 
 				order by 
-					id_empresa desc";
-		
+					id_empresa desc';
+
 		$stmt = $this->db->prepare($query);
 		$stmt->execute();
 
@@ -391,26 +388,26 @@ class DAO
 
 	public function buscaTodosServicosDoDiarioObra($idDiarioObra)
 	{
-		$query = "
+		$query = '
 				select * 
 					from 
 				servico
 					where
 				fk_id_diario_obra = :fk_id_diario_obra
-				";
-		
+				';
+
 		$stmt = $this->db->prepare($query);
 		$data = [
 			'fk_id_diario_obra' => $idDiarioObra
 		];
 		$stmt->execute($data);
-		
+
 		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
 	}
 
 	public function buscaTodosFuncionariosJoinEmpresa()
 	{
-		$query = "
+		$query = '
 				select 
 					f.id_funcionario,
 					f.fk_id_empresa,
@@ -425,8 +422,8 @@ class DAO
 				on f.fk_id_empresa = e.id_empresa
 					order by f.nome asc
 				limit 150
-				";
-		
+				';
+
 		$stmt = $this->db->prepare($query);
 		$stmt->execute();
 
@@ -435,7 +432,7 @@ class DAO
 
 	public function buscaPeriodoObraDoFuncionario($idObra, $idFuncionario)
 	{
-		$query = "
+		$query = '
 				select 
 					min(fdo.data) as min_data,
 					max(fdo.data) as max_data
@@ -448,120 +445,125 @@ class DAO
 				where 
 					do.fk_id_obra = :fk_id_obra
 				and
-					fdo.fk_id_funcionario = :fk_id_funcionario";
-		
+					fdo.fk_id_funcionario = :fk_id_funcionario';
+
 		$stmt = $this->db->prepare($query);
 		$data = [
 			'fk_id_obra' => $idObra,
 			'fk_id_funcionario' => $idFuncionario
 		];
 		$stmt->execute($data);
-		
+
 		$arr = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
-		if (!empty($arr))
-			return (object)$arr[0];
-		
+		if (!empty($arr)) {
+			return (object) $arr[0];
+		}
+
 		return null;
 	}
 
 	public function buscaEmpresaPorNome($nomeFantasia)
 	{
-		$query = "
+		$query = '
 				select * 
 					from 
 				empresa 
 					where 
-				nome_fantasia = :nome_fantasia";
-		
+				nome_fantasia = :nome_fantasia';
+
 		$stmt = $this->db->prepare($query);
 		$data = [
 			'nome_fantasia' => $nomeFantasia
 		];
 		$stmt->execute($data);
-		
+
 		$arr = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
-		if (!empty($arr))
-			return (object)$arr[0];
-		
+		if (!empty($arr)) {
+			return (object) $arr[0];
+		}
+
 		return null;
 	}
 
 	public function buscaEmpresaPorId($idEmpresa)
 	{
-		$query = "
+		$query = '
 				select * 
 					from 
 				empresa 
 					where 
 				id_empresa = :id_empresa
-				";
-		
+				';
+
 		$stmt = $this->db->prepare($query);
 		$data = [
 			'id_empresa' => $idEmpresa
 		];
 		$stmt->execute($data);
-		
+
 		$arr = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
-		if (!empty($arr))
-			return (object)$arr[0];
-		
+		if (!empty($arr)) {
+			return (object) $arr[0];
+		}
+
 		return null;
 	}
 
 	public function buscaFuncionarioPorId($idFuncionario)
 	{
-		$query = "
+		$query = '
 				select * 
 					from 
 				funcionario 
 					where 
 				id_funcionario = :id_funcionario
-				";
-		
+				';
+
 		$stmt = $this->db->prepare($query);
 		$data = [
 			'id_funcionario' => $idFuncionario
 		];
 		$stmt->execute($data);
-		
+
 		$arr = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
-		if (!empty($arr))
-			return (object)$arr[0];
-		
+		if (!empty($arr)) {
+			return (object) $arr[0];
+		}
+
 		return null;
 	}
 
 	public function buscaObraPorNome($descricaoObra)
 	{
-		$query = "
+		$query = '
 				select * 
 					from 
 				obra
 					where 
-				descricao_resumo = :descricao_resumo";
-		
+				descricao_resumo = :descricao_resumo';
+
 		$stmt = $this->db->prepare($query);
 		$data = [
 			'descricao_resumo' => $descricaoObra
 		];
 		$stmt->execute($data);
-		
+
 		$arr = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
-		if (!empty($arr))
-			return (object)$arr[0];
-		
+		if (!empty($arr)) {
+			return (object) $arr[0];
+		}
+
 		return null;
 	}
 
 	public function calculaTotalAcumuladoHorasObraPorPeriodo($diarioObra)
 	{
-		$query = "
+		$query = '
 				select 
 					sum(carga_horas_dia) as total_acumulado
 				from 
@@ -570,26 +572,27 @@ class DAO
 					fk_id_obra = :fk_id_obra
 				and
 					data < :data
-				";
-		
+				';
+
 		$stmt = $this->db->prepare($query);
 		$data = [
 			'fk_id_obra' => $diarioObra->fk_id_obra,
 			'data' => $diarioObra->data
 		];
 		$stmt->execute($data);
-		
+
 		$arr = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
-		if (!empty($arr))
-			return (object)$arr[0];
-		
+		if (!empty($arr)) {
+			return (object) $arr[0];
+		}
+
 		return null;
 	}
 
 	public function buscaFuncionariosDoDiarioDeObra($idDiarioObra)
 	{
-		$query = "
+		$query = '
 				select 
 					*
 				from 
@@ -600,14 +603,14 @@ class DAO
 					f.id_funcionario = fk_id_funcionario
 				where 
 					fk_id_diario_obra = :id_diario_obra
-				";
-		
+				';
+
 		$stmt = $this->db->prepare($query);
 		$data = [
 			'id_diario_obra' => $idDiarioObra
 		];
 		$stmt->execute($data);
-		
+
 		$arr = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
 		return $arr;
@@ -615,7 +618,7 @@ class DAO
 
 	public function buscaPorFuncionarioDiarioDeObra(FuncionarioDiarioObra $fdo)
 	{
-		$query = "
+		$query = '
 				select 
 					*
 				from
@@ -623,26 +626,27 @@ class DAO
 				where 
 					fk_id_funcionario = :fk_id_funcionario
 				and
-					fk_id_diario_obra = :fk_id_diario_obra";
-		
+					fk_id_diario_obra = :fk_id_diario_obra';
+
 		$stmt = $this->db->prepare($query);
 		$data = [
 			'fk_id_funcionario' => $fdo->fk_id_funcionario,
 			'fk_id_diario_obra' => $fdo->fk_id_diario_obra
 		];
 		$stmt->execute($data);
-		
+
 		$arr = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
-		if (!empty($arr))
-			return (object)$arr[0];
-		
+		if (!empty($arr)) {
+			return (object) $arr[0];
+		}
+
 		return null;
 	}
 
 	public function buscaFuncionarioPorNome($funcionarioNome)
 	{
-		$query = "
+		$query = '
 				select 
 					f.id_funcionario,
 					f.nome,
@@ -656,19 +660,20 @@ class DAO
 				on 
 					f.fk_id_empresa = e.id_empresa
 				where 
-					nome = :nome";
-		
+					nome = :nome';
+
 		$stmt = $this->db->prepare($query);
 		$data = [
 			'nome' => $funcionarioNome
 		];
 		$stmt->execute($data);
-		
+
 		$arr = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
-		if (!empty($arr))
-			return (object)$arr[0];
-		
+		if (!empty($arr)) {
+			return (object) $arr[0];
+		}
+
 		return null;
 	}
 
@@ -692,23 +697,22 @@ class DAO
 				order by
 					f.nome asc
 				limit 150	";
-		
+
 		$stmt = $this->db->prepare($query);
 		$data = [
 			'nome' => $nome
 		];
 		$stmt->execute($data);
-		
+
 		$arr = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-		
+
 		return $arr;
 	}
 
-	public function buscaTodosDiariosObraDoFuncionario($idFuncionario, $idObra=null)
+	public function buscaTodosDiariosObraDoFuncionario($idFuncionario, $idObra = null)
 	{
-		if (!$idObra)
-		{
-			$query = "
+		if (!$idObra) {
+			$query = '
 				select 
 					do.id_diario_obra,
 					do.numero_diario,
@@ -732,15 +736,13 @@ class DAO
 					obra.id_obra = do.fk_id_obra
 				where 
 					fdo.fk_id_funcionario = :fk_id_funcionario
-				";
-	
+				';
+
 			$data = [
 				'fk_id_funcionario' => $idFuncionario
 			];
-		}
-		else
-		{
-			$query = "
+		} else {
+			$query = '
 				select 
 					do.id_diario_obra,
 					do.numero_diario,
@@ -767,24 +769,24 @@ class DAO
 					do.fk_id_obra = :fk_id_obra
 				order by
 					fdo.data asc
-				";
-	
+				';
+
 			$data = [
 				'fk_id_funcionario' => $idFuncionario,
 				'fk_id_obra' => $idObra
 			];
 		}
-		
+
 		$stmt = $this->db->prepare($query);
-		
+
 		$stmt->execute($data);
-		
+
 		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
 	}
 
 	public function funcionarioJaExiste($nomeFuncionario, $idEmpresa)
 	{
-		$query = "
+		$query = '
 				select * 
 					from 
 				funcionario 
@@ -792,8 +794,8 @@ class DAO
 				nome = :nome
 					and
 				fk_id_empresa = :fk_id_empresa
-				";
-		
+				';
+
 		$stmt = $this->db->prepare($query);
 		$data = [
 			'nome' => $nomeFuncionario,
@@ -805,30 +807,31 @@ class DAO
 		return count($arr) > 0;
 	}
 
-	function buscaUltimaInsercao($nomeTabela, $campoId)
-    {
-        $sql = "select 
+	public function buscaUltimaInsercao($nomeTabela, $campoId)
+	{
+		$sql = "select 
                     *
                 from 
                     `$nomeTabela`
                 where
                     `$campoId` = (SELECT MAX(`$campoId`) FROM `$nomeTabela`)";
 
-        $stmt = $this->db->query($sql);
+		$stmt = $this->db->query($sql);
 
 		$arr = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
-        if (count($arr) > 0)
-            return (object)$arr[0];
+		if (count($arr) > 0) {
+			return (object) $arr[0];
+		}
 
-        return null;
-    }
+		return null;
+	}
 
 	/******************* UPDATE *******************/
 
 	public function updateDiarioObra($diarioObra)
 	{
-		$sql = "UPDATE 
+		$sql = 'UPDATE 
                     diario_obra
                 SET
 					`numero_diario` = :numero_diario,
@@ -838,7 +841,7 @@ class DAO
 					`carga_horas_dia` = :carga_horas_dia,
 					`total_horas` = :total_horas
                 WHERE
-                    `id_diario_obra` = :id_diario_obra";
+                    `id_diario_obra` = :id_diario_obra';
 
 		$data = [
 			'numero_diario' => $diarioObra->numero_diario,
@@ -852,20 +855,20 @@ class DAO
 
 		$stmt = $this->db->prepare($sql);
 		$ret = $stmt->execute($data);
-		
+
 		return $ret;
 	}
 
 	public function updateFuncionarioDiarioObra($fdo)
 	{
-		$sql = "UPDATE 
+		$sql = 'UPDATE 
                     funcionario_diario_obra
                 SET
 					`data` = :data,
 					`horario_trabalho` = :horario_trabalho,
 					`horas_trabalhadas` = :horas_trabalhadas
                 WHERE
-                    `id_funcionario_diario_obra` = :id_funcionario_diario_obra";
+                    `id_funcionario_diario_obra` = :id_funcionario_diario_obra';
 
 		$data = [
 			'data' => $fdo->data,
@@ -876,7 +879,7 @@ class DAO
 
 		$stmt = $this->db->prepare($sql);
 		$ret = $stmt->execute($data);
-		
+
 		return $ret;
 	}
 
@@ -884,148 +887,145 @@ class DAO
 
 	public function deleteEmpresa($empresa)
 	{
-		$sql = "
+		$sql = '
 				delete
                     from 
                 `empresa`
                     where
 				`id_empresa` = :id_empresa;
-				";
+				';
 
 		$stmt = $this->db->prepare($sql);
 
 		$stmt->bindValue(':id_empresa', $empresa->id_empresa);
 		$ret = $stmt->execute();
-		
+
 		return $ret;
 	}
 
 	public function deleteObra($obra)
 	{
-		$sql = "
+		$sql = '
 				delete
                     from 
                 `obra`
                     where
 				`id_obra` = :id_obra
-				";
+				';
 
 		$stmt = $this->db->prepare($sql);
 
 		$stmt->bindValue(':id_obra', $obra->id_obra);
 		$ret = $stmt->execute();
-		
+
 		return $ret;
 	}
 
 	public function deleteAlbum($idDiarioObra)
 	{
-		$sql = "
+		$sql = '
 				delete
                     from 
                 `imagem`
                     where
 				`fk_id_diario_obra` = :fk_id_diario_obra
-				";
+				';
 
 		$stmt = $this->db->prepare($sql);
 
 		$stmt->bindValue(':fk_id_diario_obra', $idDiarioObra);
 		$ret = $stmt->execute();
-		
+
 		return $ret;
 	}
-	
+
 	public function deleteDiarioObra($diarioObra)
 	{
-		$sql = "
+		$sql = '
 				delete
                     from 
                 `diario_obra`
                     where
 				`id_diario_obra` = :id_diario_obra;
-				";
+				';
 
 		$stmt = $this->db->prepare($sql);
 
 		$stmt->bindValue(':id_diario_obra', $diarioObra->id_diario_obra);
 		$ret = $stmt->execute();
-		
+
 		return $ret;
 	}
 
 	public function deleteFuncionario($funcionario)
 	{
-		$sql = "
+		$sql = '
 				delete
                     from 
                 `funcionario`
                     where
 				`id_funcionario` = :id_funcionario;
-				";
+				';
 
 		$stmt = $this->db->prepare($sql);
 
 		$stmt->bindValue(':id_funcionario', $funcionario->id_funcionario);
 		$ret = $stmt->execute();
-		
+
 		return $ret;
 	}
 
 	public function deleteFuncionarioDiarioObra($fdo)
 	{
-		$sql = "
+		$sql = '
 				delete
                     from 
                 `funcionario_diario_obra`
                     where
 				`id_funcionario_diario_obra` = :id_funcionario_diario_obra;
-				";
+				';
 
 		$stmt = $this->db->prepare($sql);
 
 		$stmt->bindValue(':id_funcionario_diario_obra', $fdo->id_funcionario_diario_obra);
 		$ret = $stmt->execute();
-		
+
 		return $ret;
 	}
 
 	public function deleteTodosServicosDiarioObra($idDiarioObra)
 	{
-		$sql = "
+		$sql = '
 				delete
                     from 
                 `servico`
                     where
 				`fk_id_diario_obra` = :fk_id_diario_obra;
-				";
+				';
 
 		$stmt = $this->db->prepare($sql);
 
 		$stmt->bindValue(':fk_id_diario_obra', $idDiarioObra);
 		$ret = $stmt->execute();
-		
+
 		return $ret;
 	}
 
 	public function deleteTodosFuncionariosDiarioObra($idDiarioObra)
 	{
-		$sql = "
+		$sql = '
 				delete
                     from 
                 `funcionario_diario_obra`
                     where
 				`fk_id_diario_obra` = :fk_id_diario_obra;
-				";
+				';
 
 		$stmt = $this->db->prepare($sql);
 
 		$stmt->bindValue(':fk_id_diario_obra', $idDiarioObra);
 		$ret = $stmt->execute();
-		
+
 		return $ret;
 	}
 }
-
-
-?>

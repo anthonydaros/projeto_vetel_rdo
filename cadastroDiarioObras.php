@@ -1,134 +1,120 @@
 <?php
-    require_once __DIR__ . '/startup.php';
-    require_once __DIR__ . '/ftpFunctions.php';
-    
-    use Models\Empresa;
-    use Models\Funcionario;
-    // use Models\FuncionarioDiarioObra;
-    use Models\DiarioObra;
-    use Models\Obra;
+require_once __DIR__ . '/startup.php';
+require_once __DIR__ . '/ftpFunctions.php';
 
-    if (isset($_GET['id_obra']))
-    {
-        // Input validation for GET parameter id_obra
-        $id_obra = filter_var($_GET['id_obra'], FILTER_VALIDATE_INT);
-        if ($id_obra === false || $id_obra <= 0) {
-            header('Location: cadastroObra.php?error=invalid_id');
-            exit;
-        }
-        
-        // Verify if obra exists
-        $obraExists = $dao->buscaObraPorId($id_obra);
-        if (!$obraExists) {
-            header('Location: cadastroObra.php?error=obra_not_found');
-            exit;
-        }
-        
-        $listaDiariosObra = $dao->buscaTodosDiariosDaObra($id_obra);
-        // $data = date('Y-m-d');
-        $diarioObra = new DiarioObra();
-        $diarioObra->fk_id_obra = $id_obra;
+// use Models\FuncionarioDiarioObra;
+use Models\DiarioObra;
+use Models\Obra;
 
-        if (!empty($listaDiariosObra))
-        {
-            $diarioObra->numero_diario = ((object)$listaDiariosObra[0])->numero_diario + 1;
-            
-            $data = ((object)$listaDiariosObra[0])->data;
-            $diarioObra->data = (new DateTime($data))->add(new DateInterval('P1D'));
-        }
-        else
-        {
-            $diarioObra->numero_diario = 1;
-            $diarioObra->data = new DateTime(date('Y-m-d'));
-        }
-    }
-    else if (isset($_POST['id_obra']))
-    {
-        // Input validation for POST parameter id_obra
-        $id_obra = filter_var($_POST['id_obra'], FILTER_VALIDATE_INT);
-        if ($id_obra === false || $id_obra <= 0) {
-            header('Location: cadastroObra.php?error=invalid_id');
-            exit;
-        }
-        
-        // Verify if obra exists
-        $obraExists = $dao->buscaObraPorId($id_obra);
-        if (!$obraExists) {
-            header("Location: cadastroDiarioObras.php?id_obra=$id_obra&error=obra_not_found");
-            exit;
-        }
-        
-        $diarioObra = new DiarioObra();
+if (isset($_GET['id_obra'])) {
+	// Input validation for GET parameter id_obra
+	$id_obra = filter_var($_GET['id_obra'], FILTER_VALIDATE_INT);
+	if ($id_obra === false || $id_obra <= 0) {
+		header('Location: cadastroObra.php?error=invalid_id');
+		exit;
+	}
 
-        $diarioObra->fk_id_obra = $id_obra;
-        $diarioObra->numero_diario = isset($_POST['numero_relatorio']) ? intval($_POST['numero_relatorio']) : 1;
-        $diarioObra->data = isset($_POST['data']) ? $_POST['data'] : date('Y-m-d');
-        
-        // Additional validation for numero_relatorio
-        if ($diarioObra->numero_diario <= 0) {
-            header("Location: cadastroDiarioObras.php?id_obra=$id_obra&error=invalid_numero");
-            exit;
-        }
-        
-        // Validate date format
-        if (!DateTime::createFromFormat('Y-m-d', $diarioObra->data)) {
-            header("Location: cadastroDiarioObras.php?id_obra=$id_obra&error=invalid_date");
-            exit;
-        }
-        
-        if (!$dao->buscaDiarioObraPorIdObraDataNumero($diarioObra))
-        {
-            $ret = $dao->insereDiarioObra($diarioObra);
+	// Verify if obra exists
+	$obraExists = $dao->buscaObraPorId($id_obra);
+	if (!$obraExists) {
+		header('Location: cadastroObra.php?error=obra_not_found');
+		exit;
+	}
 
-            header("Location: cadastroDiarioObras.php?id_obra={$diarioObra->fk_id_obra}");
-        }
-        else
-        {
-            header("Location: cadastroDiarioObras.php?id_obra={$diarioObra->fk_id_obra}&sucesso=0");
-        }
-    }
-    else if(isset($_GET['remover']))
-    {
-        // Input validation for GET parameter remover
-        $id = filter_var($_GET['remover'], FILTER_VALIDATE_INT);
-        if ($id === false || $id <= 0) {
-            header('Location: cadastroObra.php?error=invalid_id');
-            exit;
-        }
-        
-        $diarioObra = new DiarioObra();
-        $diarioObra->id_diario_obra = $id;
-        
-        // Verify if diario exists before deletion
-        $diarioExists = $dao->buscaDiarioObraPorId($id);
-        if (!$diarioExists) {
-            header('Location: cadastroObra.php?error=diario_not_found');
-            exit;
-        }
+	$listaDiariosObra = $dao->buscaTodosDiariosDaObra($id_obra);
+	// $data = date('Y-m-d');
+	$diarioObra = new DiarioObra();
+	$diarioObra->fk_id_obra = $id_obra;
 
-        $album = $dao->buscaAlbumDiario($diarioObra->id_diario_obra);
-        
-        foreach ($album as $foto)
-        {
-            if (file_exists($foto['url'])) {
-                unlink($foto['url']);
-            }
-        }
-        
-        $ret = $dao->deleteAlbum($diarioObra->id_diario_obra);
+	if (!empty($listaDiariosObra)) {
+		$diarioObra->numero_diario = ((object) $listaDiariosObra[0])->numero_diario + 1;
 
-        $removido = $dao->deleteDiarioObra($diarioObra);
-        
-        // Get the obra ID to redirect properly
-        $obraId = $diarioExists->fk_id_obra ?? 0;
-        if ($obraId > 0) {
-            header("Location: cadastroDiarioObras.php?id_obra=$obraId");
-        } else {
-            header('Location: cadastroObra.php');
-        }
-        exit;
-    }
-    
+		$data = ((object) $listaDiariosObra[0])->data;
+		$diarioObra->data = (new DateTime($data))->add(new DateInterval('P1D'));
+	} else {
+		$diarioObra->numero_diario = 1;
+		$diarioObra->data = new DateTime(date('Y-m-d'));
+	}
+} elseif (isset($_POST['id_obra'])) {
+	// Input validation for POST parameter id_obra
+	$id_obra = filter_var($_POST['id_obra'], FILTER_VALIDATE_INT);
+	if ($id_obra === false || $id_obra <= 0) {
+		header('Location: cadastroObra.php?error=invalid_id');
+		exit;
+	}
+
+	// Verify if obra exists
+	$obraExists = $dao->buscaObraPorId($id_obra);
+	if (!$obraExists) {
+		header("Location: cadastroDiarioObras.php?id_obra=$id_obra&error=obra_not_found");
+		exit;
+	}
+
+	$diarioObra = new DiarioObra();
+
+	$diarioObra->fk_id_obra = $id_obra;
+	$diarioObra->numero_diario = isset($_POST['numero_relatorio']) ? intval($_POST['numero_relatorio']) : 1;
+	$diarioObra->data = isset($_POST['data']) ? $_POST['data'] : date('Y-m-d');
+
+	// Additional validation for numero_relatorio
+	if ($diarioObra->numero_diario <= 0) {
+		header("Location: cadastroDiarioObras.php?id_obra=$id_obra&error=invalid_numero");
+		exit;
+	}
+
+	// Validate date format
+	if (!DateTime::createFromFormat('Y-m-d', $diarioObra->data)) {
+		header("Location: cadastroDiarioObras.php?id_obra=$id_obra&error=invalid_date");
+		exit;
+	}
+
+	if (!$dao->buscaDiarioObraPorIdObraDataNumero($diarioObra)) {
+		$ret = $dao->insereDiarioObra($diarioObra);
+
+		header("Location: cadastroDiarioObras.php?id_obra={$diarioObra->fk_id_obra}");
+	} else {
+		header("Location: cadastroDiarioObras.php?id_obra={$diarioObra->fk_id_obra}&sucesso=0");
+	}
+} elseif (isset($_GET['remover'])) {
+	// Input validation for GET parameter remover
+	$id = filter_var($_GET['remover'], FILTER_VALIDATE_INT);
+	if ($id === false || $id <= 0) {
+		header('Location: cadastroObra.php?error=invalid_id');
+		exit;
+	}
+
+	$diarioObra = new DiarioObra();
+	$diarioObra->id_diario_obra = $id;
+
+	// Verify if diario exists before deletion
+	$diarioExists = $dao->buscaDiarioObraPorId($id);
+	if (!$diarioExists) {
+		header('Location: cadastroObra.php?error=diario_not_found');
+		exit;
+	}
+
+	$album = $dao->buscaAlbumDiario($diarioObra->id_diario_obra);
+
+	foreach ($album as $foto) {
+		if (file_exists($foto['url'])) {
+			unlink($foto['url']);
+		}
+	}
+
+	$ret = $dao->deleteAlbum($diarioObra->id_diario_obra);
+
+	$removido = $dao->deleteDiarioObra($diarioObra);
+
+	// Get the obra ID to redirect properly
+	$obraId = $diarioExists->fk_id_obra ?? 0;
+	if ($obraId > 0) {
+		header("Location: cadastroDiarioObras.php?id_obra=$obraId");
+	} else {
+		header('Location: cadastroObra.php');
+	}
+	exit;
+}
+
 ?>
 <!DOCTYPE html>
     <html lang="pt-br">
@@ -159,27 +145,27 @@
             
             <?php if (isset($_GET['error'])) { ?>
                 <div class="alert alert-danger w-75 mx-auto" role="alert">
-                    <?php 
-                    switch($_GET['error']) {
-                        case 'invalid_id':
-                            echo 'ID inválido fornecido.';
-                            break;
-                        case 'obra_not_found':
-                            echo 'Obra não encontrada.';
-                            break;
-                        case 'diario_not_found':
-                            echo 'Diário não encontrado.';
-                            break;
-                        case 'invalid_numero':
-                            echo 'Número do relatório deve ser maior que zero.';
-                            break;
-                        case 'invalid_date':
-                            echo 'Formato de data inválido.';
-                            break;
-                        default:
-                            echo 'Erro desconhecido.';
-                    }
-                    ?>
+                    <?php
+					switch ($_GET['error']) {
+						case 'invalid_id':
+							echo 'ID inválido fornecido.';
+							break;
+						case 'obra_not_found':
+							echo 'Obra não encontrada.';
+							break;
+						case 'diario_not_found':
+							echo 'Diário não encontrado.';
+							break;
+						case 'invalid_numero':
+							echo 'Número do relatório deve ser maior que zero.';
+							break;
+						case 'invalid_date':
+							echo 'Formato de data inválido.';
+							break;
+						default:
+							echo 'Erro desconhecido.';
+					}
+            	?>
                 </div>
             <?php } ?>
             

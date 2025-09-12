@@ -1,101 +1,176 @@
 <?php
-    require_once __DIR__ . '/startup.php';
-    require_once __DIR__ . '/ftpFunctions.php';
-    require_once __DIR__ . '/auth/CSRF.php';
-    
-    use Models\Empresa;
-    use Models\Funcionario;
-    use Models\FuncionarioDiarioObra;
-    use Models\Obra;
-    use Auth\CSRF;
+require_once __DIR__ . '/startup.php';
+require_once __DIR__ . '/ftpFunctions.php';
+require_once __DIR__ . '/auth/CSRF.php';
 
-    if (isset($_FILES['file']) && !empty($_FILES['file'])) 
-    {
-        $fileData = file_get_contents($_FILES['file']['tmp_name']);
-        $extensao = strtolower(explode('.', $_FILES["file"]["name"])[1]);
-        
-        $pathLogo = strtolower(isset($_POST['pathLogo']) ? $_POST['pathLogo'] : '');
-        
-        if (!logoJaCadastrado($pathLogo))
-        {
-            $pathLogo = __DIR__ . "/img/logo/$pathLogo.$extensao";
-            file_put_contents($pathLogo, $fileData);  
-        }          
-    }
-    else if (isset($_POST['submit']))
-    {
-        // Verify CSRF token
-        if (!CSRF::verifyPost()) {
-            header("Location: cadastroEmpresa.php?error=invalid_token");
-            exit;
-        }
-        
-        $nomeFantasia = isset($_POST['nomeFantasia']) ? trim($_POST['nomeFantasia']) : '';
-        $contratanteSn = isset($_POST['contratanteSn']) ? $_POST['contratanteSn'] : 0;
-        $buscaEmpresa = $dao->buscaEmpresaPorNome($nomeFantasia);
-        
-        $extensao = isset($_POST['pathLogo']) ? explode('.', $_POST['pathLogo'])[1] : '';
-        $extensao = strtolower($extensao);
+use Models\Empresa;
+use Auth\CSRF;
 
-        if (!$buscaEmpresa)
-        {
-            $empresa = new Empresa();
-            $empresa->nome_fantasia = $nomeFantasia;
-            $empresa->contratante_sn = $contratanteSn;
+/**
+ * Checks if a logo file already exists
+ */
+function isLogoAlreadyRegistered(string $logoName): bool
+{
+	$logoDirectory = __DIR__ . '/img/logo';
 
-            $nomeFantasia = strtolower($nomeFantasia);
-            
-            $empresa->url_logo = isset($_POST['pathLogo']) ? __DIR__ . "/img/logo/$nomeFantasia.$extensao" : null;
-            $empresa_nova = $dao->insereEmpresa($empresa);
+	if (!is_dir($logoDirectory)) {
+		return false;
+	}
 
-            header('Location: cadastroEmpresa.php?sucesso=1');
-        }
-        else
-        {
-            header('Location: cadastroEmpresa.php?sucesso=0');
-        }
-        
-    }
-    else if(isset($_GET['remover']))
-    {
-        // Input validation for GET parameter
-        $id = filter_var($_GET['remover'], FILTER_VALIDATE_INT);
-        if ($id === false || $id <= 0) {
-            header('Location: cadastroEmpresa.php?error=invalid_id');
-            exit;
-        }
-        
-        $empresa = $dao->buscaEmpresaPorId($id);
-        if ($empresa) {
-            $urlLogo = $empresa->url_logo ? $empresa->url_logo : '';
-            if ($urlLogo && file_exists($urlLogo)) {
-                unlink($urlLogo);
-            }
-            
-            $removido = $dao->deleteEmpresa($empresa);
-        }
-        
-        header('Location: cadastroEmpresa.php');
-    }
+	$files = scandir($logoDirectory);
 
-    function logoJaCadastrado($nome)
-    {
-        $dir = __DIR__ . "/img/logo";
-        $scan = scandir($dir);
+	foreach ($files as $file) {
+		if (is_file("$logoDirectory/$file")) {
+			$fileNameWithoutExtension = pathinfo($file, PATHINFO_FILENAME);
+			if (strcasecmp($fileNameWithoutExtension, $logoName) === 0) {
+				return true;
+			}
+		}
+	}
 
-        foreach($scan as $file)
-        {
-            if (!is_dir("$dir/$file"))
-            {
-                if (strtolower(explode('.', $file)[0]) == strtolower($nome))
-                {
-                    return true;
-                }
-                
-            }
-        }
-        return false;
-    }
+	return false;
+}
+
+/**
+ * Handles logo file upload
+ */
+function handleLogoUpload(): void
+{
+	if (empty($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
+		return;
+	}
+
+	$fileData = file_get_contents($_FILES['file']['tmp_name']);
+	$fileName = $_FILES['file']['name'];
+	$fileExtension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+
+	$logoPath = strtolower($_POST['pathLogo'] ?? '');
+
+	if (!empty($logoPath) && !isLogoAlreadyRegistered($logoPath)) {
+		$logoFilePath = __DIR__ . "/img/logo/{$logoPath}.{$fileExtension}";
+		file_put_contents($logoFilePath, $fileData);
+	}
+}
+
+/**
+ * Validates company form data
+ */
+function validateCompanyData(): ?string
+{
+	$companyName = trim($_POST['nomeFantasia'] ?? '');
+
+	if (empty($companyName)) {
+		return 'nomeRequired=1';
+	}
+
+	return null;
+}
+
+/**
+ * Creates and saves a new company
+ */
+function createCompany($dao, array $formData): bool
+{
+	$companyName = trim($formData['nomeFantasia']);
+	$isContractor = isset($formData['contratanteSn']) ? (int) $formData['contratanteSn'] : 0;
+
+	$company = new Empresa();
+	$company->nome_fantasia = $companyName;
+	$company->contratante_sn = $isContractor;
+
+	// Handle logo URL if provided
+	if (!empty($formData['pathLogo'])) {
+		$fileExtension = strtolower(pathinfo($formData['pathLogo'], PATHINFO_EXTENSION));
+		$logoName = strtolower($companyName);
+		$company->url_logo = __DIR__ . "/img/logo/{$logoName}.{$fileExtension}";
+	}
+
+	return $dao->insereEmpresa($company) !== null;
+}
+
+/**
+ * Handles company registration form submission
+ */
+function handleCompanyRegistration($dao): void
+{
+	if (!CSRF::verifyPost()) {
+		redirectWithError('invalid_token');
+		return;
+	}
+
+	$validationError = validateCompanyData();
+	if ($validationError !== null) {
+		redirectWithError($validationError);
+		return;
+	}
+
+	$companyName = trim($_POST['nomeFantasia']);
+	$existingCompany = $dao->buscaEmpresaPorNome($companyName);
+
+	if ($existingCompany) {
+		redirectWithMessage('sucesso=0');
+		return;
+	}
+
+	if (createCompany($dao, $_POST)) {
+		redirectWithMessage('sucesso=1');
+	} else {
+		redirectWithError('cadastroFalha=1');
+	}
+}
+
+/**
+ * Handles company deletion
+ */
+function handleCompanyDeletion($dao): void
+{
+	$companyId = filter_var($_GET['remover'], FILTER_VALIDATE_INT);
+
+	if ($companyId === false || $companyId <= 0) {
+		redirectWithError('invalid_id');
+		return;
+	}
+
+	$company = $dao->buscaEmpresaPorId($companyId);
+	if ($company) {
+		// Remove logo file if exists
+		if (!empty($company->url_logo) && file_exists($company->url_logo)) {
+			unlink($company->url_logo);
+		}
+
+		$dao->deleteEmpresa($company);
+	}
+
+	header('Location: cadastroEmpresa.php');
+	exit;
+}
+
+/**
+ * Redirects with error parameter
+ */
+function redirectWithError(string $error): void
+{
+	header("Location: cadastroEmpresa.php?error={$error}");
+	exit;
+}
+
+/**
+ * Redirects with message parameter
+ */
+function redirectWithMessage(string $message): void
+{
+	header("Location: cadastroEmpresa.php?{$message}");
+	exit;
+}
+
+// Main logic
+if (isset($_FILES['file']) && !empty($_FILES['file'])) {
+	handleLogoUpload();
+} elseif (isset($_POST['submit'])) {
+	handleCompanyRegistration($dao);
+} elseif (isset($_GET['remover'])) {
+	handleCompanyDeletion($dao);
+}
 ?>
 <!DOCTYPE html>
     <html lang="pt-br">

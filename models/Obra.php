@@ -1,4 +1,5 @@
 <?php
+
 namespace Models;
 
 class Obra
@@ -22,6 +23,3 @@ class Obra
 		$this->$attr = $value;
 	}
 }
-
-
-?>

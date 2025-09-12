@@ -1,71 +1,127 @@
 <?php
-    require_once __DIR__ . '/startup.php';
-    require_once __DIR__ . '/auth/CSRF.php';
+require_once __DIR__ . '/startup.php';
+require_once __DIR__ . '/auth/CSRF.php';
 
-    use Models\Empresa;
-    use Models\Funcionario;
-    use Models\FuncionarioObra;
-    use Models\Obra;
-    use Auth\CSRF;
+use Models\Funcionario;
+use Auth\CSRF;
 
-    $listaEmpresas = $dao->buscaTodasEmpresas();
+/**
+ * Validates employee form data
+ */
+function validateEmployeeData(): ?string
+{
+	if (empty($_POST['empresa'])) {
+		return 'empresaRequired=1';
+	}
 
-    if (isset($_POST['submit']))
-    {
-        // Verify CSRF token
-        if (!CSRF::verifyPost()) {
-            header("Location: cadastroFuncionario.php?error=invalid_token");
-            exit;
-        }
-        
-        if ($_POST['empresa'] == '')
-        {
-            header('Location: cadastroFuncionario.php?empresaRequired=1');
-            die();
-        }
-        $funcionario = new Funcionario();
-        $empresa = $dao->buscaEmpresaPorNome($_POST['empresa']);
-        
-        if (!$empresa)
-        {
-            header('Location: cadastroFuncionario.php?empresaExiste=0');
-        }
-        else if (!$dao->funcionarioJaExiste($_POST['nome'], $empresa->id_empresa))
-        {
-            $funcionario->fk_id_empresa = $empresa->id_empresa;
-            $funcionario->nome = $_POST['nome'];
-            $funcionario->cargo = $_POST['cargo'];
-            
-            $funcionario = $dao->insereFuncionario($funcionario);
-            header('Location: cadastroFuncionario.php?cadastroSucesso=1');
-        }
-        else
-        {
-            header('Location: cadastroFuncionario.php?funcionarioExiste=1');
-        }
-    }
-    else if (isset($_GET['remover']))
-    {
-        // Input validation for GET parameter
-        $id = filter_var($_GET['remover'], FILTER_VALIDATE_INT);
-        if ($id === false || $id <= 0) {
-            header('Location: cadastroFuncionario.php?error=invalid_id');
-            exit;
-        }
-        
-        $funcionario = new Funcionario();
-        $funcionario->id_funcionario = $id;
-        
-        // Verify if the funcionario exists before deletion
-        $funcionarioExists = $dao->buscaFuncionarioPorId($id);
-        if ($funcionarioExists) {
-            $removido = $dao->deleteFuncionario($funcionario);   
-        }
-        
-        header('Location: cadastroFuncionario.php');
-        exit;
-    }
-   
+	if (empty($_POST['nome'])) {
+		return 'nomeRequired=1';
+	}
+
+	if (empty($_POST['cargo'])) {
+		return 'cargoRequired=1';
+	}
+
+	return null;
+}
+
+/**
+ * Creates and saves a new employee
+ */
+function createEmployee($dao, array $formData, int $companyId): bool
+{
+	$employee = new Funcionario();
+	$employee->fk_id_empresa = $companyId;
+	$employee->nome = trim($formData['nome']);
+	$employee->cargo = trim($formData['cargo']);
+
+	return $dao->insereFuncionario($employee) !== null;
+}
+
+/**
+ * Handles employee registration form submission
+ */
+function handleEmployeeRegistration($dao): void
+{
+	if (!CSRF::verifyPost()) {
+		redirectWithError('invalid_token');
+		return;
+	}
+
+	$validationError = validateEmployeeData();
+	if ($validationError !== null) {
+		redirectWithError($validationError);
+		return;
+	}
+
+	$company = $dao->buscaEmpresaPorNome($_POST['empresa']);
+	if (!$company) {
+		redirectWithError('empresaExiste=0');
+		return;
+	}
+
+	if ($dao->funcionarioJaExiste($_POST['nome'], $company->id_empresa)) {
+		redirectWithError('funcionarioExiste=1');
+		return;
+	}
+
+	if (createEmployee($dao, $_POST, $company->id_empresa)) {
+		redirectWithSuccess('cadastroSucesso=1');
+	} else {
+		redirectWithError('cadastroFalha=1');
+	}
+}
+
+/**
+ * Handles employee deletion
+ */
+function handleEmployeeDeletion($dao): void
+{
+	$employeeId = filter_var($_GET['remover'], FILTER_VALIDATE_INT);
+
+	if ($employeeId === false || $employeeId <= 0) {
+		redirectWithError('invalid_id');
+		return;
+	}
+
+	$employee = $dao->buscaFuncionarioPorId($employeeId);
+	if ($employee) {
+		$employeeToDelete = new Funcionario();
+		$employeeToDelete->id_funcionario = $employeeId;
+		$dao->deleteFuncionario($employeeToDelete);
+	}
+
+	header('Location: cadastroFuncionario.php');
+	exit;
+}
+
+/**
+ * Redirects with error parameter
+ */
+function redirectWithError(string $error): void
+{
+	header("Location: cadastroFuncionario.php?error={$error}");
+	exit;
+}
+
+/**
+ * Redirects with success parameter
+ */
+function redirectWithSuccess(string $success): void
+{
+	header("Location: cadastroFuncionario.php?{$success}");
+	exit;
+}
+
+// Main logic
+$listaEmpresas = $dao->buscaTodasEmpresas();
+
+if (isset($_POST['submit'])) {
+	handleEmployeeRegistration($dao);
+} elseif (isset($_GET['remover'])) {
+	handleEmployeeDeletion($dao);
+}
+
 ?>
 <!DOCTYPE html>
     <html lang="pt-br">

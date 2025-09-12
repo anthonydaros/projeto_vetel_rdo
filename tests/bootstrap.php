@@ -1,4 +1,5 @@
 <?php
+
 /**
  * PHPUnit Bootstrap File
  */
@@ -31,5 +32,5 @@ ini_set('display_errors', '1');
 
 // Start session for testing
 if (session_status() !== PHP_SESSION_ACTIVE) {
-    session_start();
+	session_start();
 }

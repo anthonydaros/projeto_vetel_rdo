@@ -1,119 +1,118 @@
 <?php
-    require_once __DIR__ . '/vendor/autoload.php';
-    require_once __DIR__ . '/startup.php';
-    
-    use Models\Empresa;
-    use Models\Funcionario;
-    use Models\FuncionarioDiarioObra;
-    use Models\DiarioObra;
-    use Models\Obra;
-    use Models\Servico;
-    use Dompdf\Dompdf;
+require_once __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/startup.php';
 
-    if (isset($_GET['id_funcionario'])) 
-    {
-        extract($_GET);
+use Dompdf\Dompdf;
 
-        $funcionario = $dao->buscaFuncionarioPorId($id_funcionario);
-        
-        $listaDiariosFuncionario = $dao->buscaTodosDiariosObraDoFuncionario($id_funcionario);
+if (isset($_GET['id_funcionario'])) {
+	extract($_GET);
 
-        $listaObrasFuncionario = array_unique(array_map(function($diario) {
-            return $diario['id_obra'];
-        }, $listaDiariosFuncionario));
+	$funcionario = $dao->buscaFuncionarioPorId($id_funcionario);
 
-        if (isset($_GET['id_obra']))
-        {
-            $obra = $dao->buscaObraPorId($id_obra);
-            $contratante = $dao->buscaEmpresaPorId($obra->fk_id_contratante);
-            $contratada = $dao->buscaEmpresaPorId($obra->fk_id_contratada);
-            
-            $periodoObra = $dao->buscaPeriodoObraDoFuncionario($id_obra, $id_funcionario);
-            $obra = [
-                'funcionario' => $funcionario->nome,
-                'min_data' => $periodoObra->min_data,
-                'max_data' => $periodoObra->max_data,
-                'descricao_resumo' => $obra->descricao_resumo,
-                'id_contratante' => $contratante->id_empresa,
-                'nome_contratante' => $contratante->nome_fantasia,
-                'id_contratada' => $contratada->id_empresa,
-                'nome_contratada' => $contratada->nome_fantasia
-            ];
+	$listaDiariosFuncionario = $dao->buscaTodosDiariosObraDoFuncionario($id_funcionario);
 
-            echo json_encode($obra);
-            die();
-        }
-    }
-    else if (isset($_POST['submit']))
-    {
-        extract($_POST);
+	$listaObrasFuncionario = array_unique(array_map(function ($diario) {
+		return $diario['id_obra'];
+	}, $listaDiariosFuncionario));
 
-        $mes_ano = explode('-', $mes_ano);
-        
-        $listaDiariosObra = $dao->buscaTodosDiariosObraDoFuncionario($id_funcionario, $id_obra);
+	if (isset($_GET['id_obra'])) {
+		$obra = $dao->buscaObraPorId($id_obra);
+		$contratante = $dao->buscaEmpresaPorId($obra->fk_id_contratante);
+		$contratada = $dao->buscaEmpresaPorId($obra->fk_id_contratada);
 
-        $listaDiariosObra = array_filter($listaDiariosObra, function($diario) use ($mes_ano) {
-            $dataDiario = explode('-', $diario['data']);
+		$periodoObra = $dao->buscaPeriodoObraDoFuncionario($id_obra, $id_funcionario);
+		$obra = [
+			'funcionario' => $funcionario->nome,
+			'min_data' => $periodoObra->min_data,
+			'max_data' => $periodoObra->max_data,
+			'descricao_resumo' => $obra->descricao_resumo,
+			'id_contratante' => $contratante->id_empresa,
+			'nome_contratante' => $contratante->nome_fantasia,
+			'id_contratada' => $contratada->id_empresa,
+			'nome_contratada' => $contratada->nome_fantasia
+		];
 
-            return $dataDiario[0] == $mes_ano[0] && $dataDiario[1] == $mes_ano[1];
-        });
+		echo json_encode($obra);
+		die();
+	}
+} elseif (isset($_POST['submit'])) {
+	extract($_POST);
 
-        $obra = $dao->buscaObraPorId($id_obra);
-        $funcionario = $dao->buscaFuncionarioPorId($id_funcionario);
-        $contratada = $dao->buscaEmpresaPorId($obra->fk_id_contratada);
+	$mes_ano = explode('-', $mes_ano);
 
-        /******************** CRIAÇÃO PDF ********************/
-        
-        $dompdf = new Dompdf();
-        $options = $dompdf->getOptions();
-        $options->setDefaultFont('Helvetica');
-        // $options->setDefaultFont('DejaVu Sans');
-        $options->set(
-        [
-            'isHtml5ParserEnabled' => true,
-            'isRemoteEnabled' => true,
-            'isPhpEnabled' => true,
-            'chroot' => __DIR__
-        ]);
+	$listaDiariosObra = $dao->buscaTodosDiariosObraDoFuncionario($id_funcionario, $id_obra);
 
-        $dompdf->setOptions($options);
+	$listaDiariosObra = array_filter($listaDiariosObra, function ($diario) use ($mes_ano) {
+		$dataDiario = explode('-', $diario['data']);
 
-        ob_start();
+		return $dataDiario[0] == $mes_ano[0] && $dataDiario[1] == $mes_ano[1];
+	});
 
-        require_once __DIR__ . '/rdp.php';
-        
-        // $html = file_get_contents('rdo.php');
-        $html = ob_get_contents();
-        
-        ob_end_clean();
-        $html = mb_convert_encoding($html, 'HTML-ENTITIES', 'UTF-8');
-        $dompdf->loadHtml($html);
+	$obra = $dao->buscaObraPorId($id_obra);
+	$funcionario = $dao->buscaFuncionarioPorId($id_funcionario);
+	$contratada = $dao->buscaEmpresaPorId($obra->fk_id_contratada);
 
-        // (Optional) Setup the paper size and orientation
-        $dompdf->setPaper('A4', 'portrait');
+	/******************** CRIAÇÃO PDF ********************/
 
-        // Render the HTML as PDF
-        $dompdf->render();
+	$dompdf = new Dompdf();
+	$options = $dompdf->getOptions();
+	$options->setDefaultFont('Helvetica');
+	// $options->setDefaultFont('DejaVu Sans');
+	$options->set(
+		[
+			'isHtml5ParserEnabled' => true,
+			'isRemoteEnabled' => true,
+			'isPhpEnabled' => true,
+			'chroot' => __DIR__
+		]
+	);
 
-        // Parameters
-        $x          = 505;
-        $y          = 790;
-        $text       = "Página {PAGE_NUM} de {PAGE_COUNT}";     
-        $font       = $dompdf->getFontMetrics()->get_font('Helvetica', 'normal');   
-        $size       = 10;    
-        $color      = array(0,0,0);
-        $word_space = 0.0;
-        $char_space = 0.0;
-        $angle      = 0.0;
+	$dompdf->setOptions($options);
 
-        $dompdf->getCanvas()->page_text(
-            $x, $y, $text, $font, $size, $color, $word_space, $char_space, $angle
-        );
+	ob_start();
 
-        // Output the generated PDF to Browser
-        // $dompdf->stream();
-        $dompdf->stream("meu_dom.pdf", array("Attachment" => false));
-    }
+	require_once __DIR__ . '/rdp.php';
+
+	// $html = file_get_contents('rdo.php');
+	$html = ob_get_contents();
+
+	ob_end_clean();
+	$html = mb_convert_encoding($html, 'HTML-ENTITIES', 'UTF-8');
+	$dompdf->loadHtml($html);
+
+	// (Optional) Setup the paper size and orientation
+	$dompdf->setPaper('A4', 'portrait');
+
+	// Render the HTML as PDF
+	$dompdf->render();
+
+	// Parameters
+	$x          = 505;
+	$y          = 790;
+	$text       = 'Página {PAGE_NUM} de {PAGE_COUNT}';
+	$font       = $dompdf->getFontMetrics()->get_font('Helvetica', 'normal');
+	$size       = 10;
+	$color      = [0, 0, 0];
+	$word_space = 0.0;
+	$char_space = 0.0;
+	$angle      = 0.0;
+
+	$dompdf->getCanvas()->page_text(
+		$x,
+		$y,
+		$text,
+		$font,
+		$size,
+		$color,
+		$word_space,
+		$char_space,
+		$angle
+	);
+
+	// Output the generated PDF to Browser
+	// $dompdf->stream();
+	$dompdf->stream('meu_dom.pdf', ['Attachment' => false]);
+}
 
 ?>
 <!DOCTYPE html>

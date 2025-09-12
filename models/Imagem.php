@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Models;
@@ -23,6 +24,3 @@ class Imagem
 		$this->$attr = $value;
 	}
 }
-
-
-?>

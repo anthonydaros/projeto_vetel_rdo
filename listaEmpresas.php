@@ -1,6 +1,6 @@
 <?php
-    $listaEmpresas = $dao->buscaTodasEmpresas();
-    
+$listaEmpresas = $dao->buscaTodasEmpresas();
+
 ?>
 <!DOCTYPE html>
     <html lang="pt-br">

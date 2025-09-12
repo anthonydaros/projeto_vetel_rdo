@@ -1,6 +1,6 @@
 <?php
-    // $listaDiariosObra = $dao->buscaTodosDiariosDaObra(isset($_GET['id_obra']) ? $_GET['id_obra'] : 0);
-    
+// $listaDiariosObra = $dao->buscaTodosDiariosDaObra(isset($_GET['id_obra']) ? $_GET['id_obra'] : 0);
+
 ?>
 <!DOCTYPE html>
     <html lang="pt-br">

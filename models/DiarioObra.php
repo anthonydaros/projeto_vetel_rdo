@@ -1,4 +1,5 @@
 <?php
+
 namespace Models;
 
 class DiarioObra
@@ -26,6 +27,3 @@ class DiarioObra
 		$this->$attr = $value;
 	}
 }
-
-
-?>

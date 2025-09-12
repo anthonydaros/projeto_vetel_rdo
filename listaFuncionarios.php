@@ -1,6 +1,6 @@
 <?php
-    $listaFuncionarios = $dao->buscaTodosFuncionariosJoinEmpresa();
-    
+$listaFuncionarios = $dao->buscaTodosFuncionariosJoinEmpresa();
+
 ?>
 <!DOCTYPE html>
     <html lang="pt-br">

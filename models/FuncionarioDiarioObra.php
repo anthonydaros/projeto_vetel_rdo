@@ -1,4 +1,5 @@
 <?php
+
 namespace Models;
 
 class FuncionarioDiarioObra
@@ -24,6 +25,3 @@ class FuncionarioDiarioObra
 		$this->$attr = $value;
 	}
 }
-
-
-?>

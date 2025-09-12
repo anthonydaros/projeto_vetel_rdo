@@ -1,6 +1,6 @@
 <?php
-    $listaObras = $dao->buscaTodasObras();
-    
+$listaObras = $dao->buscaTodasObras();
+
 ?>
 <!DOCTYPE html>
     <html lang="pt-br">

@@ -10,8 +10,8 @@ $auth = Auth::getInstance();
 
 // If already logged in, redirect to index
 if ($auth->isLoggedIn()) {
-    header('Location: index.php');
-    exit;
+	header('Location: index.php');
+	exit;
 }
 
 $error = '';
@@ -19,22 +19,22 @@ $success = '';
 
 // Handle login form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = $_POST['username'] ?? '';
-    $password = $_POST['password'] ?? '';
-    
-    if (empty($username) || empty($password)) {
-        $error = 'Por favor, preencha todos os campos.';
-    } else {
-        if ($auth->login($username, $password)) {
-            // Redirect to original page or index
-            $redirect = $_SESSION['redirect_after_login'] ?? 'index.php';
-            unset($_SESSION['redirect_after_login']);
-            header("Location: $redirect");
-            exit;
-        } else {
-            $error = 'Usuário ou senha inválidos.';
-        }
-    }
+	$username = $_POST['username'] ?? '';
+	$password = $_POST['password'] ?? '';
+
+	if (empty($username) || empty($password)) {
+		$error = 'Por favor, preencha todos os campos.';
+	} else {
+		if ($auth->login($username, $password)) {
+			// Redirect to original page or index
+			$redirect = $_SESSION['redirect_after_login'] ?? 'index.php';
+			unset($_SESSION['redirect_after_login']);
+			header("Location: $redirect");
+			exit;
+		} else {
+			$error = 'Usuário ou senha inválidos.';
+		}
+	}
 }
 ?>
 <!DOCTYPE html>

@@ -23,7 +23,7 @@ date_default_timezone_set(Config::get('TIMEZONE', 'America/Sao_Paulo'));
 
 // Set execution time limit from configuration
 $maxExecutionTime = Config::get('MAX_EXECUTION_TIME', 300);
-set_time_limit((int)$maxExecutionTime);
+set_time_limit((int) $maxExecutionTime);
 
 // Configure error reporting based on environment
 if (Config::get('APP_DEBUG', false)) {
@@ -47,9 +47,9 @@ $pdo = Connection::getPDO();
 if (!$pdo) {
 	// More user-friendly error message
 	$errorMessage = Config::get('APP_DEBUG', false)
-		? "Database connection failed. Please check your configuration."
+		? 'Database connection failed. Please check your configuration.'
 		: "We're experiencing technical difficulties. Please try again later.";
-	
+
 	die($errorMessage);
 }
 

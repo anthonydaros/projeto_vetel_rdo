@@ -1,41 +1,75 @@
 <?php
-    $pathAlbum = __DIR__ . '/img/album';
+/**
+ * Gets first file from album directory
+ */
+function getFirstAlbumFile(string $albumPath): ?string
+{
+	if (!is_dir($albumPath)) {
+		return null;
+	}
 
-    $handle = opendir($pathAlbum);
-    while (false !== ($entry = readdir($handle))) 
-    {
-        if (!is_dir("$pathAlbum/$entry"))
-        {
-            $fileData = file_get_contents("$pathAlbum/$entry");
-            break;
-        }
-    }
-    closedir($handle);
-    
-    $album = $dao->buscaAlbumDiario($diarioObra->id_diario_obra);
-    $tamanhoAlbum = count($album);
-    $resto = $tamanhoAlbum % 3;
+	$handle = opendir($albumPath);
+	if (!$handle) {
+		return null;
+	}
 
-    /*
-    $pathLogo = $pathAlbum . '/logo';
-    $scan = scandir($pathLogo);
-    $imgContratada = '';
-    $imgContratante = '';
-    foreach($scan as $file)
-    {
-        if (!is_dir("$pathLogo/$file"))
-        {
-            if (strtolower(explode('.', $file)[0]) == strtolower($contratada->nome_fantasia))
-            {
-                $imgContratada = "$pathLogo/$file";
-            }
-            else if (strtolower(explode('.', $file)[0]) == strtolower($contratante->nome_fantasia))
-            {
-                $imgContratante = "$pathLogo/$file";
-            }
-        }
-    }
-    */
+	$fileData = null;
+	while (($entry = readdir($handle)) !== false) {
+		$fullPath = "$albumPath/$entry";
+		if (is_file($fullPath)) {
+			$fileData = file_get_contents($fullPath);
+			break;
+		}
+	}
+	closedir($handle);
+
+	return $fileData;
+}
+
+/**
+ * Formats hour display with appropriate decimal places
+ */
+function formatHours(float $hours): string
+{
+	if ($hours === floor($hours)) {
+		return number_format($hours, 0, ',', '.') . 'h';
+	}
+
+	if (($hours * 10) === floor($hours * 10)) {
+		return number_format($hours, 1, ',', '.') . 'h';
+	}
+
+	return number_format($hours, 2, ',', '.') . 'h';
+}
+
+// Initialize album data
+$pathAlbum = __DIR__ . '/img/album';
+$firstAlbumFile = getFirstAlbumFile($pathAlbum);
+
+$album = $dao->buscaAlbumDiario($diarioObra->id_diario_obra);
+$albumSize = count($album);
+$remainder = $albumSize % 3;
+
+/*
+$pathLogo = $pathAlbum . '/logo';
+$scan = scandir($pathLogo);
+$imgContratada = '';
+$imgContratante = '';
+foreach($scan as $file)
+{
+	if (!is_dir("$pathLogo/$file"))
+	{
+		if (strtolower(explode('.', $file)[0]) == strtolower($contratada->nome_fantasia))
+		{
+			$imgContratada = "$pathLogo/$file";
+		}
+		else if (strtolower(explode('.', $file)[0]) == strtolower($contratante->nome_fantasia))
+		{
+			$imgContratante = "$pathLogo/$file";
+		}
+	}
+}
+*/
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -188,7 +222,7 @@
                     <?php for ($i = 1; $i <= count($descricaoServico); $i++) { ?>
                         <tr style="font-size:12px !important;">
                             <td class="my-0 py-0 text-center"><?php echo htmlspecialchars($i) ?></td>
-                            <td class="my-0 py-0"><?php echo htmlspecialchars($descricaoServico[$i-1]) ?></td>
+                            <td class="my-0 py-0"><?php echo htmlspecialchars($descricaoServico[$i - 1]) ?></td>
                         </tr>
                     <?php } ?>
                 </tbody>
@@ -221,10 +255,10 @@
                         <?php for ($i = 1; $i <= count($funcionarios); $i++) { ?>
                             <tr class="py-0 my-0" style="max-height: 0em; height: 0em; padding: 0.2em !important">
                                 <td style="padding: 0.2em 0 !important; max-height: 0em !important; max-width: 2px !important" class="my-0 py-0"><?php echo htmlspecialchars($i) ?></td>
-                                <td style="padding: 0.2em 0.3em !important; max-height: 0em !important;" class="my-0 py-0 text-uppercase"><?php echo htmlspecialchars(ucwords($funcionarios[$i-1]->nome)) ?></td>
-                                <td style="padding: 0.2em 0.3em !important; max-height: 0em !important;" class="my-0 py-0 text-uppercase"><?php echo htmlspecialchars(ucwords($funcionarios[$i-1]->cargo)) ?></td>
-                                <td style="padding: 0.2em !important; max-height: 0em !important;" class="my-0 py-0 text-uppercase"><?php echo htmlspecialchars($horaEntrada[$i-1] . ' às ' . $horaSaida[$i-1]) ?></td>
-                                <td style="padding: 0.2em 0 !important; max-height: 0em !important; max-width: 5px !important" class="my-0 py-0 text-uppercase"><?php echo htmlspecialchars(ucwords($funcionarios[$i-1]->nome_fantasia)) ?></td>
+                                <td style="padding: 0.2em 0.3em !important; max-height: 0em !important;" class="my-0 py-0 text-uppercase"><?php echo htmlspecialchars(ucwords($funcionarios[$i - 1]->nome)) ?></td>
+                                <td style="padding: 0.2em 0.3em !important; max-height: 0em !important;" class="my-0 py-0 text-uppercase"><?php echo htmlspecialchars(ucwords($funcionarios[$i - 1]->cargo)) ?></td>
+                                <td style="padding: 0.2em !important; max-height: 0em !important;" class="my-0 py-0 text-uppercase"><?php echo htmlspecialchars($horaEntrada[$i - 1] . ' às ' . $horaSaida[$i - 1]) ?></td>
+                                <td style="padding: 0.2em 0 !important; max-height: 0em !important; max-width: 5px !important" class="my-0 py-0 text-uppercase"><?php echo htmlspecialchars(ucwords($funcionarios[$i - 1]->nome_fantasia)) ?></td>
                             </tr>
                         <?php } ?>
                         
@@ -242,45 +276,13 @@
                             <div class="py-2" style="border-bottom: 1px solid #333;">
                                 <b class="mr-2">CARGA HORAS DO DIA:</b>
                                 <span>
-                                    <?php 
-                                        if ($cargaHorasDia - floor($cargaHorasDia))
-                                        {
-                                            if ($cargaHorasDia * 10 - floor($cargaHorasDia * 10))
-                                            {
-                                                echo number_format($cargaHorasDia, 2, ',', '.') . 'h';
-                                            }
-                                            else
-                                            {
-                                                echo number_format($cargaHorasDia, 1, ',', '.') . 'h';
-                                            }
-                                        }
-                                        else
-                                        {
-                                            echo number_format($cargaHorasDia, 0, ',', '.') . 'h';
-                                        }
-                                    ?>
+                                    <?php echo formatHours($cargaHorasDia); ?>
                                 </span>
                             </div>
                             <div class="py-2">
                                 <b class="mr-2">SOMA TOTAL DE HORAS:</b>
                                 <span>
-                                    <?php 
-                                        if ($totalAcumuladoHorasObra - floor($totalAcumuladoHorasObra))
-                                        {
-                                            if ($totalAcumuladoHorasObra * 10 - floor($totalAcumuladoHorasObra * 10))
-                                            {
-                                                echo number_format($totalAcumuladoHorasObra, 2, ',', '.') . 'h';
-                                            }
-                                            else
-                                            {
-                                                echo number_format($totalAcumuladoHorasObra, 1, ',', '.') . 'h';
-                                            }
-                                        }
-                                        else
-                                        {
-                                            echo number_format($totalAcumuladoHorasObra, 0, ',', '.') . 'h';
-                                        }
-                                    ?>
+                                    <?php echo formatHours($totalAcumuladoHorasObra); ?>
                                 </span>
                             </div>
                         </td>
@@ -316,7 +318,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <?php for ($i = 0; $i < $tamanhoAlbum-$resto; $i += 3) { ?>
+                    <?php for ($i = 0; $i < $albumSize - $remainder; $i += 3) { ?>
                         <tr>
                             <td>
                                 <p style="text-align: center; vertical-align: middle;">
@@ -325,44 +327,44 @@
                             </td>
                             <td>
                                 <p style="text-align: center; vertical-align: middle;">
-                                    <img style="vertical-align: middle;" src="<?php echo htmlspecialchars($album[$i+1]['url']) ?>">
+                                    <img style="vertical-align: middle;" src="<?php echo htmlspecialchars($album[$i + 1]['url']) ?>">
                                 </p>
                             </td>
                             <td>
                                 <p style="text-align: center; vertical-align: middle;">
-                                    <img style="vertical-align: middle;" src="<?php echo htmlspecialchars($album[$i+2]['url']) ?>">
+                                    <img style="vertical-align: middle;" src="<?php echo htmlspecialchars($album[$i + 2]['url']) ?>">
                                 </p>
                             </td>
                         </tr>
                     <?php } ?>
                     
-                    <?php if ($resto == 1) { ?>
+                    <?php if ($remainder === 1) { ?>
                         <tr>
                             <td>
                                 <p style="text-align: center; vertical-align: middle;">
-                                    <img style="vertical-align: middle;" src="<?php echo htmlspecialchars($album[$tamanhoAlbum-1]['url']) ?>">
+                                    <img style="vertical-align: middle;" src="<?php echo htmlspecialchars($album[$albumSize - 1]['url']) ?>">
                                 </p>
                             </td>
                             <td></td>
                             <td></td>
                         </tr>
                     <?php } ?>
-                    <?php if ($resto == 2) { ?>
+                    <?php if ($remainder === 2) { ?>
                         <tr>
                             <td>
                                 <p style="text-align: center; vertical-align: middle;">
-                                    <img style="vertical-align: middle;" src="<?php echo htmlspecialchars($album[$tamanhoAlbum-2]['url']) ?>">
+                                    <img style="vertical-align: middle;" src="<?php echo htmlspecialchars($album[$albumSize - 2]['url']) ?>">
                                 </p>
                             </td>
                             <td>
                                 <p style="text-align: center; vertical-align: middle;">
-                                    <img style="vertical-align: middle;" src="<?php echo htmlspecialchars($album[$tamanhoAlbum-1]['url']) ?>">
+                                    <img style="vertical-align: middle;" src="<?php echo htmlspecialchars($album[$albumSize - 1]['url']) ?>">
                                 </p>
                             </td>
                             <td></td>
                         </tr>
                     <?php } ?>
-                    <?php for ($i = ceil($tamanhoAlbum / 3) * 3; $i < 12; $i += 3) { ?>
+                    <?php for ($i = ceil($albumSize / 3) * 3; $i < 12; $i += 3) { ?>
                         <tr>
                             <td></td>
                             <td></td>
