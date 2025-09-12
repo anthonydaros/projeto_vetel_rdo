@@ -120,6 +120,29 @@ COPY <<EOF /etc/apache2/sites-available/000-default.conf
         Header always set Referrer-Policy "strict-origin-when-cross-origin"
     </Directory>
     
+    # Allow public access to image directories
+    <Directory /var/www/html/img/album>
+        Options +Indexes +FollowSymLinks
+        AllowOverride All
+        Require all granted
+        
+        # Allow image files
+        <FilesMatch "\.(jpg|jpeg|png|gif|bmp|webp|svg)$">
+            Require all granted
+        </FilesMatch>
+    </Directory>
+    
+    <Directory /var/www/html/img/logo>
+        Options +Indexes +FollowSymLinks
+        AllowOverride All
+        Require all granted
+        
+        # Allow image files including special .05 extension
+        <FilesMatch "\.(jpg|jpeg|png|gif|bmp|webp|svg|05)$">
+            Require all granted
+        </FilesMatch>
+    </Directory>
+    
     # Redirect to HTTPS (Coolify handles SSL termination)
     RewriteEngine On
     RewriteCond %{HTTP:X-Forwarded-Proto} !https

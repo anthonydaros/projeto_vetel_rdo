@@ -117,7 +117,7 @@ function getValidLogoSrc(string $logoUrl): string
 /**
  * Validates and resolves image path for PDF generation
  * Works with both filename-only URLs (new) and full-path URLs (legacy)
- * Returns relative paths for DOMPDF compatibility
+ * First tries HTTP URL for public access, then falls back to base64 encoding
  */
 function getValidImageSrc(string $imageUrl): string
 {
@@ -133,6 +133,7 @@ function getValidImageSrc(string $imageUrl): string
 	// Build paths using configured photo storage path
 	$photoStoragePath = \Config\Config::get('PHOTO_STORAGE_PATH', 'img/album');
 	$absolutePath = __DIR__ . '/' . $photoStoragePath . '/' . $fileName;
+	$httpUrl = $photoStoragePath . '/' . $fileName;
 	
 	// Check if file exists locally
 	if (!file_exists($absolutePath)) {
@@ -148,9 +149,24 @@ function getValidImageSrc(string $imageUrl): string
 		);
 	}
 	
-	// Always use base64 encoding for images in PDF generation
-	// This ensures compatibility across different environments (Docker, local, etc.)
+	// First, try to use HTTP URL if images are publicly accessible
+	// This is more efficient for DOMPDF
+	if (isset($_SERVER['HTTP_HOST'])) {
+		$protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
+		$fullHttpUrl = $protocol . $_SERVER['HTTP_HOST'] . '/' . $httpUrl;
+		
+		// Test if URL is accessible
+		$headers = @get_headers($fullHttpUrl);
+		if ($headers && strpos($headers[0], '200') !== false) {
+			error_log("PDF Image Processing - Using HTTP URL: $fullHttpUrl");
+			return $fullHttpUrl;
+		}
+	}
+	
+	// Fallback to base64 encoding if HTTP access fails
+	// This ensures compatibility when images are not publicly accessible
 	try {
+		error_log("PDF Image Processing - Using base64 encoding for: $fileName");
 		$imageData = file_get_contents($absolutePath);
 		$imageType = strtolower(pathinfo($absolutePath, PATHINFO_EXTENSION));
 		
