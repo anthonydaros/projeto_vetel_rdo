@@ -32,9 +32,6 @@ services:
       
       # Photo Storage Configuration
       - PHOTO_STORAGE_PATH=/var/www/html/img/album
-      
-      # Coolify FQDN - will be set automatically
-      - SERVICE_FQDN_APP_80=https://rdo.vetel.ind.br
     
     # Volume configuration with named volumes
     volumes:
@@ -52,9 +49,9 @@ services:
       retries: 3
       start_period: 40s
     
-    # Port mapping (Coolify handles this automatically)
-    ports:
-      - "80:80"
+    # Expose port for Coolify (no port mapping needed, Coolify handles it)
+    expose:
+      - "80"
     
     # Resource limits
     deploy:
