@@ -94,10 +94,11 @@ error_log=/var/log/apache2/php_errors.log
 date.timezone=America/Sao_Paulo
 EOF
 
-# Configure Apache
+# Configure Apache with detailed logging
 COPY <<EOF /etc/apache2/sites-available/000-default.conf
 <VirtualHost *:80>
     DocumentRoot /var/www/html
+    ServerName rdo.vetel.ind.br
     
     <Directory /var/www/html>
         Options -Indexes +FollowSymLinks
@@ -120,9 +121,28 @@ COPY <<EOF /etc/apache2/sites-available/000-default.conf
     ErrorDocument 404 /404.php
     ErrorDocument 500 /500.php
     
-    # Logging
+    # Enhanced Logging Configuration
+    LogLevel info
+    
+    # Error log with more details
     ErrorLog \${APACHE_LOG_DIR}/error.log
-    CustomLog \${APACHE_LOG_DIR}/access.log combined
+    
+    # Custom log format with more information
+    LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\" %D %{X-Forwarded-For}i" extended
+    CustomLog \${APACHE_LOG_DIR}/access.log extended
+    
+    # Separate logs for different components
+    SetEnvIf Request_URI "^/health\.php$" dontlog
+    SetEnvIf Request_URI "\.jpg$|\.jpeg$|\.gif$|\.png$|\.ico$|\.css$|\.js$" static
+    
+    CustomLog \${APACHE_LOG_DIR}/access.log combined env=!dontlog
+    CustomLog \${APACHE_LOG_DIR}/static.log combined env=static
+    
+    # PHP error logging
+    php_admin_value error_log \${APACHE_LOG_DIR}/php_errors.log
+    php_admin_flag log_errors on
+    php_admin_flag display_errors off
+    php_admin_value error_reporting E_ALL
 </VirtualHost>
 EOF
 
@@ -144,27 +164,29 @@ COPY --from=composer-build /app/composer.lock* ./composer.lock
 # Copy application code
 COPY . .
 
-# Create non-root user
-RUN useradd -m -u 1000 -s /bin/bash appuser
+# Copy and set entrypoint script
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Set proper permissions
-RUN chown -R appuser:appuser /var/www/html \
+# Set proper permissions for Apache and uploads
+RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html \
     && chmod -R 777 /var/www/html/img/album \
     && chmod -R 777 /var/www/html/relatorios \
     && chmod -R 777 /var/www/sessions \
-    && chown -R appuser:appuser /var/log/apache2 \
-    && chown -R appuser:appuser /var/run/apache2
+    && chown -R www-data:www-data /var/log/apache2 \
+    && chown -R www-data:www-data /var/run/apache2
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD curl -f http://localhost/health.php || exit 1
 
-# Switch to non-root user
-USER appuser
+# Run as root to ensure permissions work correctly
+# Apache will drop privileges to www-data internally
+USER root
 
 # Expose port
 EXPOSE 80
 
-# Start Apache
-CMD ["apache2-foreground"]
+# Use entrypoint for permission setup
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
