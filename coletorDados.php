@@ -33,6 +33,14 @@ if (isset($_FILES['file']) && isset($_POST['id_diario_obra'])) {
 	}
 }
 
+// Endpoint AJAX para carregar fotos
+if (isset($_GET['ajax']) && $_GET['ajax'] === 'get_photos' && isset($_GET['id_diario_obra'])) {
+	header('Content-Type: application/json');
+	$photos = $dao->buscaAlbumDiario($_GET['id_diario_obra']);
+	echo json_encode($photos);
+	exit;
+}
+
 if (isset($_GET['id_diario_obra'])) {
 	$diarioObra = $dao->buscaDiarioObraPorId($_GET['id_diario_obra']);
 	$album = $dao->buscaAlbumDiario($_GET['id_diario_obra']);
@@ -191,8 +199,8 @@ function downloadFile($localFile)
         <script src="js/jquery3.5.1.min.js"></script>
         <script src="js/popper.min.js"></script>
         <script src="js/bootstrap4.5.2.min.js"></script>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/6.0.0-beta.2/dropzone.min.css" integrity="sha512-61eWJhbs/2KkJ2JhEkOdDT8Zu7MwXMhZ1gLNzIx6g7DU+R8VYJy2fQ0JOHHGi3GYKuLsEZo9pV8cWWUjdHpvew==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/6.0.0-beta.2/dropzone-min.js" integrity="sha512-FFyRTpBn3Gly5HfClQk4DiY8DSUJJw0BT2wwxKuOyVyVvRUV1WPL/+oJ97qEAi4MaOl6/F0f4+j2PYmJXL4Jog==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+        <link rel="stylesheet" href="dropzone-5.7.0/dist/dropzone.css" />
+        <script src="dropzone-5.7.0/dist/dropzone.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js" integrity="sha512-pHVGpX7F/27yZ0ISY+VVjyULApbDlD0/X0rgGbTqCE7WFW5MezNTWG/dnhtbBuICzsd0WQPgpE4REBLv+UqChw==" crossorigin="anonymous"></script>
         <style>
             .table td {
@@ -876,7 +884,7 @@ function downloadFile($localFile)
 
                 <input type="submit"
                     id="submit"
-                    style="cursor: pointer"
+                    style="cursor: pointer; z-index: 1000; position: relative;"
                     class="btn btn-primary float-right mb-5"
                     name="submit"
                     value="Gerar Relatório">
@@ -884,7 +892,7 @@ function downloadFile($localFile)
                 <?php if (!empty($album)) { ?>
                     <div class="dropdown clearfix float-right mb-5 py-0">
                         <button class="btn btn-outline-secondary dropdown-toggle float-right mr-5 mb-5" type="button" id="dropdownMenuButton" data-toggle="dropdown">
-                            Álbum <small><?php echo htmlspecialchars(count($album) . ' fotos') ?></small>
+                            Álbum <small><span id="photoCount"><?php echo htmlspecialchars(count($album)) ?></span> fotos</small>
                         </button>
                         <div class="dropdown-menu py-0" aria-labelledby="dropdownMenuButton">
                             <a class="dropdown-item text-dark" href="?baixar_album=1&id_diario_obra=<?php echo htmlspecialchars(isset($_GET['id_diario_obra']) ? $_GET['id_diario_obra'] : '') ?>">
@@ -894,12 +902,25 @@ function downloadFile($localFile)
                         </div>
                     </div>
                 <?php } else { ?>
-                    <div class="my-0">
-                        <button disabled class="btn btn-light float-right mr-5 mb-5">
-                            Álbum <small>0 fotos</small>
+                    <div class="my-0" id="emptyAlbumDiv">
+                        <button disabled class="btn btn-light float-right mr-5 mb-5" id="emptyAlbumButton">
+                            Álbum <small><span id="photoCount">0</span> fotos</small>
                         </button>
                     </div>
                 <?php } ?>
+
+                <!-- Clear floats to prevent overlap -->
+                <div class="clearfix"></div>
+                
+                <!-- Galeria de Miniaturas (Hidden by default) -->
+                <div id="photoGallery" class="row mt-5 pt-3" style="display: none; clear: both; position: relative; z-index: 1;">
+                    <div class="col-12">
+                        <h6 style="cursor: default; user-select: none; pointer-events: none;">Fotos do Álbum:</h6>
+                        <div id="thumbnailContainer" class="d-flex flex-wrap">
+                            <!-- Miniaturas serão inseridas aqui dinamicamente -->
+                        </div>
+                    </div>
+                </div>
                 
             </form>
         </div>
@@ -967,6 +988,147 @@ function downloadFile($localFile)
 
     // Inicializa Dropzone 6.0
     const myDropzone = new Dropzone("#dropzoneAlbum", dropzoneConfig);
+    
+    // Sistema de contagem dinâmica e miniaturas
+    let photoCount = <?php echo count($album); ?>;
+    
+    function updatePhotoCount() {
+        const countElements = document.querySelectorAll('#photoCount');
+        countElements.forEach(el => el.textContent = photoCount);
+        
+        // Atualizar visibilidade do botão de álbum
+        const emptyDiv = document.getElementById('emptyAlbumDiv');
+        const dropdownDiv = document.querySelector('.dropdown.clearfix');
+        
+        if (photoCount > 0) {
+            if (emptyDiv) emptyDiv.style.display = 'none';
+            
+            // Criar dropdown se não existir
+            if (!dropdownDiv) {
+                createAlbumDropdown();
+            }
+            
+            // Mostrar galeria de miniaturas
+            showPhotoGallery();
+        } else {
+            if (emptyDiv) emptyDiv.style.display = 'block';
+            if (dropdownDiv) dropdownDiv.style.display = 'none';
+            
+            // Esconder galeria
+            document.getElementById('photoGallery').style.display = 'none';
+        }
+    }
+    
+    function createAlbumDropdown() {
+        const container = document.querySelector('input[value="Gerar Relatório"]').parentNode;
+        const dropdownHtml = `
+            <div class="dropdown clearfix float-right mb-5 py-0">
+                <button class="btn btn-outline-secondary dropdown-toggle float-right mr-5 mb-5" type="button" id="dropdownMenuButton" data-toggle="dropdown">
+                    Álbum <small><span id="photoCount">${photoCount}</span> fotos</small>
+                </button>
+                <div class="dropdown-menu py-0" aria-labelledby="dropdownMenuButton">
+                    <a class="dropdown-item text-dark" href="?baixar_album=1&id_diario_obra=<?php echo htmlspecialchars(isset($_GET['id_diario_obra']) ? $_GET['id_diario_obra'] : '') ?>">
+                        Baixar
+                    </a>
+                    <a class="dropdown-item text-dark" href="?remover_album=1&id_diario_obra=<?php echo htmlspecialchars(isset($_GET['id_diario_obra']) ? $_GET['id_diario_obra'] : '') ?>" style="cursor: pointer !important">Remover</a>
+                </div>
+            </div>
+        `;
+        container.insertAdjacentHTML('afterend', dropdownHtml);
+    }
+    
+    function showPhotoGallery() {
+        const gallery = document.getElementById('photoGallery');
+        const container = document.getElementById('thumbnailContainer');
+        
+        // Limpar container
+        container.innerHTML = '';
+        
+        // Buscar fotos existentes via AJAX
+        const diarioId = <?php echo isset($_GET['id_diario_obra']) ? $_GET['id_diario_obra'] : 'null'; ?>;
+        if (diarioId) {
+            fetch(`?ajax=get_photos&id_diario_obra=${diarioId}`)
+                .then(response => response.json())
+                .then(photos => {
+                    photos.forEach((photo, index) => {
+                        const thumbnail = createThumbnail(photo.url, index);
+                        container.appendChild(thumbnail);
+                    });
+                    gallery.style.display = 'block';
+                })
+                .catch(error => console.error('Erro ao carregar fotos:', error));
+        }
+    }
+    
+    function createThumbnail(imageSrc, index) {
+        const div = document.createElement('div');
+        div.className = 'thumbnail-container m-1';
+        
+        // Build proper image URL (handle both filename-only and full paths)
+        let imageUrl = imageSrc;
+        if (imageUrl.indexOf('/') === -1) {
+            // Filename only - build full URL
+            imageUrl = 'img/album/' + imageSrc;
+        } else if (imageUrl.indexOf('/img/album/') === -1) {
+            // Legacy full path - extract filename and build local URL
+            const filename = imageUrl.split('/').pop();
+            imageUrl = 'img/album/' + filename;
+        }
+        
+        div.innerHTML = `
+            <div class="position-relative">
+                <img src="${imageUrl}" 
+                     class="img-thumbnail" 
+                     style="width: 80px; height: 60px; object-fit: cover; cursor: pointer;" 
+                     onclick="showImageModal('${imageUrl}', ${index})"
+                     alt="Foto ${index + 1}">
+                <small class="badge badge-secondary position-absolute" style="top: -5px; right: -5px; font-size: 10px;">${index + 1}</small>
+            </div>
+        `;
+        return div;
+    }
+    
+    function showImageModal(imageSrc, index) {
+        // Criar modal para visualização da imagem
+        const modal = document.createElement('div');
+        modal.className = 'modal fade';
+        modal.innerHTML = `
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Foto ${index + 1}</h5>
+                        <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    </div>
+                    <div class="modal-body text-center">
+                        <img src="${imageSrc}" class="img-fluid" alt="Foto ${index + 1}">
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        $(modal).modal('show');
+        
+        // Remover modal quando fechado
+        $(modal).on('hidden.bs.modal', function() {
+            document.body.removeChild(modal);
+        });
+    }
+    
+    // Event listeners do Dropzone para contagem dinâmica
+    myDropzone.on("success", function(file) {
+        photoCount++;
+        updatePhotoCount();
+    });
+    
+    myDropzone.on("removedfile", function(file) {
+        if (file.status === 'success') {
+            photoCount--;
+            updatePhotoCount();
+        }
+    });
+    
+    // Inicializar contagem
+    updatePhotoCount();
     
     // Botão de submit atualizado
     $('#submit').on('click', function(e) {

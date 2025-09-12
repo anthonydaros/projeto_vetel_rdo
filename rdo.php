@@ -42,8 +42,145 @@ function formatHours(float $hours): string
 	return number_format($hours, 2, ',', '.') . 'h';
 }
 
-// Initialize album data
-$pathAlbum = __DIR__ . '/img/album';
+/**
+ * Validates and resolves logo path for PDF generation
+ * Works with both filename-only URLs (new) and full-path URLs (legacy)
+ * Returns relative paths for DOMPDF compatibility
+ */
+function getValidLogoSrc(string $logoUrl): string
+{
+	// Handle empty logo URL
+	if (empty($logoUrl)) {
+		error_log("PDF Logo Processing - Empty logo URL");
+		return '';
+	}
+	
+	// Handle both cases: filename-only and full-path URLs
+	if (strpos($logoUrl, '/') === false) {
+		// New format: just filename
+		$fileName = $logoUrl;
+	} else {
+		// Legacy format: extract filename from full path
+		$fileName = basename($logoUrl);
+	}
+	
+	// Build paths for logo directory
+	$logoPath = 'img/logo';
+	$absolutePath = __DIR__ . '/' . $logoPath . '/' . $fileName;
+	$relativePath = $logoPath . '/' . $fileName;
+	
+	// Logging for debugging
+	error_log("PDF Logo Processing - Original URL: $logoUrl");
+	error_log("PDF Logo Processing - Filename: $fileName");
+	error_log("PDF Logo Processing - Absolute Path: $absolutePath");
+	error_log("PDF Logo Processing - Relative Path: $relativePath");
+	error_log("PDF Logo Processing - File Exists: " . (file_exists($absolutePath) ? 'YES' : 'NO'));
+	
+	// Check if file exists locally
+	if (!file_exists($absolutePath)) {
+		error_log("DOMPDF ERROR: Missing logo file: $absolutePath (original URL: $logoUrl)");
+		// Return empty string for missing logos
+		return '';
+	}
+	
+	// Get file size for optimization decisions
+	$fileSize = filesize($absolutePath);
+	error_log("PDF Logo Processing - File size: " . round($fileSize / 1024, 2) . "KB");
+	
+	// For large logos (>500KB), use base64 to ensure compatibility
+	if ($fileSize > 512000) {
+		$imageData = file_get_contents($absolutePath);
+		$imageType = pathinfo($absolutePath, PATHINFO_EXTENSION);
+		
+		// Handle special extensions
+		if ($imageType === '05') {
+			// This appears to be a special format, likely PNG
+			$imageType = 'png';
+		}
+		
+		$mimeType = $imageType === 'jpg' || $imageType === 'jpeg' ? 'image/jpeg' : 'image/' . $imageType;
+		$base64 = base64_encode($imageData);
+		error_log("PDF Logo Processing - Using base64 for large logo: $fileName");
+		return 'data:' . $mimeType . ';base64,' . $base64;
+	}
+	
+	// Return relative path for DOMPDF
+	error_log("PDF Logo Processing - Using relative path: $relativePath");
+	return $relativePath;
+}
+
+/**
+ * Validates and resolves image path for PDF generation
+ * Works with both filename-only URLs (new) and full-path URLs (legacy)
+ * Returns relative paths for DOMPDF compatibility
+ */
+function getValidImageSrc(string $imageUrl): string
+{
+	// Handle both cases: filename-only and full-path URLs
+	if (strpos($imageUrl, '/') === false) {
+		// New format: just filename
+		$fileName = $imageUrl;
+	} else {
+		// Legacy format: extract filename from full path
+		$fileName = basename($imageUrl);
+	}
+	
+	// Build paths using configured photo storage path
+	$photoStoragePath = \Config\Config::get('PHOTO_STORAGE_PATH', 'img/album');
+	$absolutePath = __DIR__ . '/' . $photoStoragePath . '/' . $fileName;
+	$relativePath = $photoStoragePath . '/' . $fileName;
+	
+	// Comprehensive logging for debugging
+	error_log("PDF Image Processing - Original URL: $imageUrl");
+	error_log("PDF Image Processing - Filename: $fileName");
+	error_log("PDF Image Processing - Absolute Path: $absolutePath");
+	error_log("PDF Image Processing - Relative Path: $relativePath");
+	error_log("PDF Image Processing - File Exists: " . (file_exists($absolutePath) ? 'YES' : 'NO'));
+	
+	// Check if file exists locally
+	if (!file_exists($absolutePath)) {
+		error_log("DOMPDF ERROR: Missing image file: $absolutePath (original URL: $imageUrl)");
+		
+		// Try base64 encoding as fallback if file exists but path is problematic
+		if (file_exists($absolutePath)) {
+			$imageData = file_get_contents($absolutePath);
+			$imageType = pathinfo($absolutePath, PATHINFO_EXTENSION);
+			$mimeType = $imageType === 'jpg' || $imageType === 'jpeg' ? 'image/jpeg' : 'image/' . $imageType;
+			$base64 = base64_encode($imageData);
+			error_log("PDF Image Processing - Using base64 fallback for: $fileName");
+			return 'data:' . $mimeType . ';base64,' . $base64;
+		}
+		
+		// Return SVG placeholder for missing images
+		error_log("PDF Image Processing - Using SVG placeholder for missing: $fileName");
+		return 'data:image/svg+xml;base64,' . base64_encode(
+			'<svg xmlns="http://www.w3.org/2000/svg" width="150" height="100" viewBox="0 0 150 100">' .
+			'<rect width="150" height="100" fill="#f0f0f0" stroke="#ccc"/>' .
+			'<text x="75" y="55" text-anchor="middle" fill="#666" font-size="12">Imagem não encontrada</text>' .
+			'</svg>'
+		);
+	}
+	
+	// Check file size for memory optimization
+	$fileSize = filesize($absolutePath);
+	error_log("PDF Image Processing - File size: $fileSize bytes");
+	
+	// For large images (>2MB), use base64 to ensure compatibility
+	if ($fileSize > 2097152) {
+		$imageData = file_get_contents($absolutePath);
+		$imageType = pathinfo($absolutePath, PATHINFO_EXTENSION);
+		$mimeType = $imageType === 'jpg' || $imageType === 'jpeg' ? 'image/jpeg' : 'image/' . $imageType;
+		$base64 = base64_encode($imageData);
+		error_log("PDF Image Processing - Using base64 for large image: $fileName");
+		return 'data:' . $mimeType . ';base64,' . $base64;
+	}
+	
+	// Return relative path for DOMPDF (relative to chroot directory)
+	error_log("PDF Image Processing - Returning relative path: $relativePath");
+	return $relativePath;
+}
+
+// Initialize album data - use configuration from startup.php
 $firstAlbumFile = getFirstAlbumFile($pathAlbum);
 
 $album = $dao->buscaAlbumDiario($diarioObra->id_diario_obra);
@@ -78,79 +215,171 @@ foreach($scan as $file)
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>R.D.O</title>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <!-- DOMPDF-optimized styles - Bootstrap replaced with compatible CSS -->
     <style>
-        /* @font-face {
-            font-family: 'Open Sans';
-            font-style: normal;
-            font-weight: normal;
-            src: url(http://themes.googleusercontent.com/static/fonts/opensans/v8/cJZKeOuBrn4kERxqtaUH3aCWcynf_cDxXwCLxiixG1c.ttf) format('truetype');
-        } */
+        /* DOMPDF-compatible base styles */
         * {
-            font-family: DejaVu Sans !important; 
-            /* font-family: Zapf-Dingbats !important;  */
-            /* font-family: 'Open Sans' !important;  */
+            font-family: DejaVu Sans; 
             font-size: 12px;
-            line-height: 1em;
+            line-height: 1.2em;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
 
-        .container {
-            min-width: 650px;
+        body {
+            font-family: DejaVu Sans;
+            font-size: 12px;
+            line-height: 1.2em;
+            color: #000;
         }
-        #header
-        {
+
+        /* Container and layout - optimized for A4 PDF */
+        .container {
+            width: 100%;
+            max-width: 650px;
+            margin: 0 auto;
+            padding: 10px;
+        }
+
+        /* Tables - DOMPDF compatible */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+        }
+        
+        td, th {
+            padding: 5px;
+            vertical-align: middle;
+            border: 1px solid #111;
+        }
+        
+        th {
+            font-weight: bold;
+            text-align: center;
+        }
+
+        /* Header table */
+        #header {
             border: 2px solid #000;
         }
-        #header img
-        {
+        
+        #header td {
+            border: none;
+            padding: 5px;
+        }
+        
+        #header img {
             max-width: 120px;
             max-height: 60px;
-        }
-        .table-bordered td, .table-bordered thead th 
-        {
-            padding: 5px;
-            color: #111;
-            border: 1px solid #111 !important;
-            vertical-align: middle;
-        }
-        .table-bordered thead th {
-            font-weight: 600;
-        }
-        .table-bordered, .table-bordered td, .table-bordered th
-        {
-            border: 1px solid #111;
-            line-height: 1.1em;
+            display: block;
         }
 
-        #album
-        {
-            /* page-break-before: always; */
-            /* page-break-after: always; */
+        /* Main content tables */
+        .table-bordered {
+            border: 1px solid #111;
         }
+        
+        .table-bordered td,
+        .table-bordered th {
+            padding: 5px;
+            color: #111;
+            border: 1px solid #111;
+            vertical-align: middle;
+        }
+        
+        .table-bordered th {
+            font-weight: bold;
+            background-color: #f9f9f9;
+        }
+
+        /* Album/Photos section - critical for image display */
+        #album {
+            page-break-inside: avoid;
+        }
+        
         #album th {
-            border-top: 2px solid #000 !important;
-            border-bottom: 2px solid #000 !important;
-            padding-top: 5px !important;
-            padding-bottom: 5px !important;
-            font-weight: bolder !important;
+            border-top: 2px solid #000;
+            border-bottom: 2px solid #000;
+            padding: 8px 5px;
+            font-weight: bold;
+            font-size: 14px;
         }
+        
         #album td {
             border: 1px dotted #111;
-            border-top: 0;
+            border-top: none;
             height: 150px;
             width: 150px;
-            max-width: 150px;
-            max-height: 150px;
-            padding: 5px;
-        }
-        #album td img {
-            margin: 2% 2%;
             text-align: center;
             vertical-align: middle;
-            /* width: 200px; */
-            max-width: 180px;
-            max-height: 150px;
+            padding: 5px;
         }
+        
+        #album td img {
+            max-width: 140px;
+            max-height: 140px;
+            width: auto;
+            height: auto;
+            vertical-align: middle;
+        }
+
+        /* Text alignment utilities */
+        .text-center { text-align: center; }
+        .text-left { text-align: left; }
+        .text-right { text-align: right; }
+        
+        /* Font weight utilities */
+        .font-weight-bold, .font-weight-bolder { font-weight: bold; }
+        
+        /* Spacing utilities - simplified for DOMPDF */
+        .mt-1 { margin-top: 5px; }
+        .mt-4 { margin-top: 20px; }
+        .my-4 { margin-top: 20px; margin-bottom: 20px; }
+        .my-5 { margin-top: 25px; margin-bottom: 25px; }
+        .mb-0 { margin-bottom: 0; }
+        .mb-2 { margin-bottom: 10px; }
+        .mb-4 { margin-bottom: 20px; }
+        .mb-5 { margin-bottom: 25px; }
+        .py-0 { padding-top: 0; padding-bottom: 0; }
+        .py-2 { padding-top: 10px; padding-bottom: 10px; }
+        
+        /* Page break controls for PDF */
+        .page-break-before { page-break-before: always; }
+        .page-break-after { page-break-after: always; }
+        .page-break-inside-avoid { page-break-inside: avoid; }
+        
+        /* Row and column structure */
+        .row { width: 100%; }
+        .col { display: table-cell; }
+        
+        /* Border utilities */
+        .border-bottom-0 { border-bottom: none; }
+        
+        /* Paragraph spacing */
+        p { margin: 5px 0; }
+        
+        /* Separator styles */
+        hr { 
+            border: none; 
+            border-top: 1px solid #444; 
+            margin: 5px 0; 
+        }
+
+        /* Generic spacing */
+        .d-block { display: block; }
+        .mx-1 { margin-left: 5px; margin-right: 5px; }
+        .my-1 { margin-top: 5px; margin-bottom: 5px; }
+        .my-0 { margin-top: 0; margin-bottom: 0; }
+        .px-2 { padding-left: 10px; padding-right: 10px; }
+        .align-top { vertical-align: top; }
+        .align-middle { vertical-align: middle; }
+        .text-uppercase { text-transform: uppercase; }
+        
+        /* Float utilities */
+        .float-right { float: right; }
+        .float-left { float: left; }
     </style>
     <!-- <script src="js/jquery3.5.1.min.js"></script> -->
 </head>
@@ -162,19 +391,23 @@ foreach($scan as $file)
             <table id="header" style="border: 1px solid #000">
                 <tr class="py-0">
                     <td class="my-1 mx-1">
+                        <?php if (!empty($contratada->url_logo)): ?>
                         <img 
                             class="m-2"
-                            style="min-width: 70px" 
-                            src="<?php echo htmlspecialchars(isset($contratada->url_logo) ? $contratada->url_logo : '') ?>">
+                            style="min-width: 70px; max-height: 70px; object-fit: contain;" 
+                            src="<?php echo htmlspecialchars(getValidLogoSrc($contratada->url_logo)) ?>">
+                        <?php endif; ?>
                     </td>
                     <td class="text-center mx-1" style="width: 300px !important; font-size: 16px !important">
-                        RELATÓRIO DIÁRIO DE OBRA (R.D.O)
+                        RELATÓRIO DIÁRIO DE OBRA<br>(R.D.O)
                     </td>
                     <td class="my-1 mx-1">
+                        <?php if (!empty($contratante->url_logo)): ?>
                         <img 
                             class="my-2"
-                            style="min-width: 70px" 
-                            src="<?php echo htmlspecialchars(isset($contratante->url_logo) ? $contratante->url_logo : '') ?>">
+                            style="min-width: 70px; max-height: 70px; object-fit: contain;" 
+                            src="<?php echo htmlspecialchars(getValidLogoSrc($contratante->url_logo)) ?>">
+                        <?php endif; ?>
                     </td>
                     <td style="max-width: 50px; border-left: 1px solid #444; font-size: 12px !important;">
                         <span class="d-block mx-1 my-1">
@@ -322,17 +555,17 @@ foreach($scan as $file)
                         <tr>
                             <td>
                                 <p style="text-align: center; vertical-align: middle;">
-                                    <img style="vertical-align: middle;" src="<?php echo htmlspecialchars($album[$i]['url']) ?>">
+                                    <img style="vertical-align: middle;" src="<?php echo htmlspecialchars(getValidImageSrc($album[$i]['url'])) ?>">
                                 </p>
                             </td>
                             <td>
                                 <p style="text-align: center; vertical-align: middle;">
-                                    <img style="vertical-align: middle;" src="<?php echo htmlspecialchars($album[$i + 1]['url']) ?>">
+                                    <img style="vertical-align: middle;" src="<?php echo htmlspecialchars(getValidImageSrc($album[$i + 1]['url'])) ?>">
                                 </p>
                             </td>
                             <td>
                                 <p style="text-align: center; vertical-align: middle;">
-                                    <img style="vertical-align: middle;" src="<?php echo htmlspecialchars($album[$i + 2]['url']) ?>">
+                                    <img style="vertical-align: middle;" src="<?php echo htmlspecialchars(getValidImageSrc($album[$i + 2]['url'])) ?>">
                                 </p>
                             </td>
                         </tr>
@@ -342,7 +575,7 @@ foreach($scan as $file)
                         <tr>
                             <td>
                                 <p style="text-align: center; vertical-align: middle;">
-                                    <img style="vertical-align: middle;" src="<?php echo htmlspecialchars($album[$albumSize - 1]['url']) ?>">
+                                    <img style="vertical-align: middle;" src="<?php echo htmlspecialchars(getValidImageSrc($album[$albumSize - 1]['url'])) ?>">
                                 </p>
                             </td>
                             <td></td>
@@ -353,12 +586,12 @@ foreach($scan as $file)
                         <tr>
                             <td>
                                 <p style="text-align: center; vertical-align: middle;">
-                                    <img style="vertical-align: middle;" src="<?php echo htmlspecialchars($album[$albumSize - 2]['url']) ?>">
+                                    <img style="vertical-align: middle;" src="<?php echo htmlspecialchars(getValidImageSrc($album[$albumSize - 2]['url'])) ?>">
                                 </p>
                             </td>
                             <td>
                                 <p style="text-align: center; vertical-align: middle;">
-                                    <img style="vertical-align: middle;" src="<?php echo htmlspecialchars($album[$albumSize - 1]['url']) ?>">
+                                    <img style="vertical-align: middle;" src="<?php echo htmlspecialchars(getValidImageSrc($album[$albumSize - 1]['url'])) ?>">
                                 </p>
                             </td>
                             <td></td>
