@@ -39,6 +39,7 @@ RUN apt-get update && apt-get install -y \
     libicu-dev \
     unzip \
     curl \
+    default-mysql-client \
     && docker-php-ext-configure gd \
         --with-freetype \
         --with-jpeg \
@@ -131,10 +132,6 @@ COPY <<EOF /etc/apache2/sites-available/000-default.conf
     
     # Error log with more details
     ErrorLog \${APACHE_LOG_DIR}/error.log
-    
-    # Custom log format with more information
-    LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\" %D %{X-Forwarded-For}i" extended
-    CustomLog \${APACHE_LOG_DIR}/access.log extended
     
     # Separate logs for different components
     SetEnvIf Request_URI "^/health\.php$" dontlog

@@ -1,0 +1,25 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    environment:
+      - DB_HOST=103.199.185.165
+      - DB_PORT=5987
+      - DB_NAME=default
+      - DB_USER=mariadb
+      - DB_PASSWORD=hr6nhoC6TWfMyAoFZbhB4TPsKoomu00U0gGov1MIsiTihJiG4KTBYXJrpzW2g1n8
+      - APP_ENV=development
+      - APP_DEBUG=true
+      - TIMEZONE=America/Sao_Paulo
+    volumes:
+      - ./img/album:/var/www/html/img/album
+      - ./relatorios:/var/www/html/relatorios
+    networks:
+      - test_network
+
+networks:
+  test_network:
+    driver: bridge
