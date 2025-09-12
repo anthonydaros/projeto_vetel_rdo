@@ -99,7 +99,8 @@ ehthumbs.db
 Desktop.ini
 
 # Development Scripts
-*.sh
+# *.sh - Commented out to allow docker-entrypoint.sh
+!docker-entrypoint.sh
 *.bat
 scripts/
 
