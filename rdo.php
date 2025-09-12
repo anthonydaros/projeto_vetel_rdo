@@ -79,13 +79,11 @@ function getValidLogoSrc(string $logoUrl): string
 		return '';
 	}
 	
-	// Get file size for optimization decisions
-	$fileSize = filesize($absolutePath);
-	
-	// For large logos (>500KB), use base64 to ensure compatibility
-	if ($fileSize > 512000) {
+	// Always use base64 encoding for logos in PDF generation
+	// This ensures compatibility across different environments (Docker, local, etc.)
+	try {
 		$imageData = file_get_contents($absolutePath);
-		$imageType = pathinfo($absolutePath, PATHINFO_EXTENSION);
+		$imageType = strtolower(pathinfo($absolutePath, PATHINFO_EXTENSION));
 		
 		// Handle special extensions
 		if ($imageType === '05') {
@@ -93,13 +91,27 @@ function getValidLogoSrc(string $logoUrl): string
 			$imageType = 'png';
 		}
 		
-		$mimeType = $imageType === 'jpg' || $imageType === 'jpeg' ? 'image/jpeg' : 'image/' . $imageType;
+		// Determine correct MIME type
+		$mimeTypes = [
+			'jpg' => 'image/jpeg',
+			'jpeg' => 'image/jpeg',
+			'png' => 'image/png',
+			'gif' => 'image/gif',
+			'bmp' => 'image/bmp',
+			'webp' => 'image/webp'
+		];
+		
+		$mimeType = isset($mimeTypes[$imageType]) ? $mimeTypes[$imageType] : 'image/' . $imageType;
 		$base64 = base64_encode($imageData);
+		
 		return 'data:' . $mimeType . ';base64,' . $base64;
+		
+	} catch (Exception $e) {
+		error_log("Logo Processing - Error encoding image: " . $e->getMessage());
+		
+		// Return empty string on error
+		return '';
 	}
-	
-	// Return relative path for DOMPDF
-	return $relativePath;
 }
 
 /**
@@ -121,23 +133,10 @@ function getValidImageSrc(string $imageUrl): string
 	// Build paths using configured photo storage path
 	$photoStoragePath = \Config\Config::get('PHOTO_STORAGE_PATH', 'img/album');
 	$absolutePath = __DIR__ . '/' . $photoStoragePath . '/' . $fileName;
-	$relativePath = $photoStoragePath . '/' . $fileName;
-	
-	// Reduced logging - only log errors
 	
 	// Check if file exists locally
 	if (!file_exists($absolutePath)) {
 		error_log("DOMPDF ERROR: Missing image file: $absolutePath (original URL: $imageUrl)");
-		
-		// Try base64 encoding as fallback if file exists but path is problematic
-		if (file_exists($absolutePath)) {
-			$imageData = file_get_contents($absolutePath);
-			$imageType = pathinfo($absolutePath, PATHINFO_EXTENSION);
-			$mimeType = $imageType === 'jpg' || $imageType === 'jpeg' ? 'image/jpeg' : 'image/' . $imageType;
-			$base64 = base64_encode($imageData);
-			error_log("PDF Image Processing - Using base64 fallback for: $fileName");
-			return 'data:' . $mimeType . ';base64,' . $base64;
-		}
 		
 		// Return SVG placeholder for missing images
 		error_log("PDF Image Processing - Using SVG placeholder for missing: $fileName");
@@ -149,20 +148,39 @@ function getValidImageSrc(string $imageUrl): string
 		);
 	}
 	
-	// Check file size for memory optimization
-	$fileSize = filesize($absolutePath);
-	
-	// For large images (>2MB), use base64 to ensure compatibility
-	if ($fileSize > 2097152) {
+	// Always use base64 encoding for images in PDF generation
+	// This ensures compatibility across different environments (Docker, local, etc.)
+	try {
 		$imageData = file_get_contents($absolutePath);
-		$imageType = pathinfo($absolutePath, PATHINFO_EXTENSION);
-		$mimeType = $imageType === 'jpg' || $imageType === 'jpeg' ? 'image/jpeg' : 'image/' . $imageType;
+		$imageType = strtolower(pathinfo($absolutePath, PATHINFO_EXTENSION));
+		
+		// Determine correct MIME type
+		$mimeTypes = [
+			'jpg' => 'image/jpeg',
+			'jpeg' => 'image/jpeg',
+			'png' => 'image/png',
+			'gif' => 'image/gif',
+			'bmp' => 'image/bmp',
+			'webp' => 'image/webp'
+		];
+		
+		$mimeType = isset($mimeTypes[$imageType]) ? $mimeTypes[$imageType] : 'image/' . $imageType;
 		$base64 = base64_encode($imageData);
+		
+		// Return base64 encoded image
 		return 'data:' . $mimeType . ';base64,' . $base64;
+		
+	} catch (Exception $e) {
+		error_log("PDF Image Processing - Error encoding image: " . $e->getMessage());
+		
+		// Return SVG placeholder on error
+		return 'data:image/svg+xml;base64,' . base64_encode(
+			'<svg xmlns="http://www.w3.org/2000/svg" width="150" height="100" viewBox="0 0 150 100">' .
+			'<rect width="150" height="100" fill="#f0f0f0" stroke="#ccc"/>' .
+			'<text x="75" y="55" text-anchor="middle" fill="#666" font-size="12">Erro ao carregar imagem</text>' .
+			'</svg>'
+		);
 	}
-	
-	// Return relative path for DOMPDF (relative to chroot directory)
-	return $relativePath;
 }
 
 // Initialize album data - use configuration from startup.php
