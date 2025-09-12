@@ -3,6 +3,7 @@ require_once __DIR__ . '/bootstrap.php'; // Nova arquitetura
 require_once __DIR__ . '/ftpFunctions.php';
 
 use Src\Exception\ServiceException;
+use Config\Config;
 
 // Nova lógica de upload de imagens
 if (isset($_FILES['file']) && isset($_POST['id_diario_obra'])) {
@@ -1150,23 +1151,33 @@ function downloadFile($localFile)
     // Inicializar contagem
     updatePhotoCount();
     
-    // Image preloading function
+    // Image preloading function with timeout
     function preloadImages() {
         return new Promise((resolve, reject) => {
             // Get all images from the album
             const albumImages = [];
             <?php if (!empty($album)) { 
+                $relativePath = Config::get('PHOTO_STORAGE_PATH', 'img/album');
                 foreach ($album as $img) { ?>
-                    albumImages.push('<?php echo htmlspecialchars($pathAlbum . '/' . $img['url']) ?>');
+                    albumImages.push('<?php echo htmlspecialchars($relativePath . '/' . $img['url']) ?>');
             <?php }} ?>
             
+            console.log('Images to preload:', albumImages);
+            
             if (albumImages.length === 0) {
+                console.log('No images to preload');
                 resolve();
                 return;
             }
             
             let loadedCount = 0;
             const totalImages = albumImages.length;
+            
+            // Set a timeout to prevent infinite loading
+            const timeoutId = setTimeout(() => {
+                console.warn('Image preloading timeout - continuing anyway');
+                resolve();
+            }, 10000); // 10 second timeout
             
             // Update modal with progress
             $('#loadingStatus').text('Carregando imagens do álbum...');
@@ -1181,6 +1192,7 @@ function downloadFile($localFile)
                     $('#loadingDetails').text(`${loadedCount} de ${totalImages} imagens carregadas`);
                     
                     if (loadedCount === totalImages) {
+                        clearTimeout(timeoutId);
                         $('#loadingStatus').text('Imagens carregadas com sucesso!');
                         setTimeout(resolve, 500); // Small delay for user feedback
                     }
@@ -1189,6 +1201,7 @@ function downloadFile($localFile)
                     loadedCount++;
                     console.warn(`Failed to preload image: ${src}`);
                     if (loadedCount === totalImages) {
+                        clearTimeout(timeoutId);
                         resolve(); // Continue even if some images fail
                     }
                 };
@@ -1199,43 +1212,53 @@ function downloadFile($localFile)
     
     // Botão de submit atualizado com modal loader
     $('#submit').on('click', function(e) {
-        const filesAccepted = myDropzone.getAcceptedFiles().length;
-        const filesQueued = myDropzone.getQueuedFiles().length;
-        
-        if (filesQueued > 0) {
-            e.preventDefault();
-            $('#existeAlbum').val(1);
+        // Check if Dropzone exists
+        if (typeof myDropzone !== 'undefined') {
+            const filesAccepted = myDropzone.getAcceptedFiles().length;
+            const filesQueued = myDropzone.getQueuedFiles().length;
             
-            // Show loading modal
-            $('#pdfLoadingModal').modal('show');
-            $('#loadingStatus').text('Fazendo upload das imagens...');
-            
-            // Processa fila de upload
-            myDropzone.processQueue();
-            
-            // Aguarda conclusão dos uploads antes de submeter o form
-            myDropzone.on("queuecomplete", function() {
-                $('#loadingStatus').text('Preparando geração do PDF...');
-                $('#loadingProgress').css('width', '90%');
+            if (filesQueued > 0) {
+                e.preventDefault();
+                $('#existeAlbum').val(1);
                 
-                // Preload images before submitting
-                preloadImages().then(() => {
-                    $('#loadingStatus').text('Gerando PDF...');
-                    $('#loadingProgress').css('width', '100%');
-                    $('#form').submit();
+                // Show loading modal
+                $('#pdfLoadingModal').modal('show');
+                $('#loadingStatus').text('Fazendo upload das imagens...');
+                
+                // Processa fila de upload
+                myDropzone.processQueue();
+                
+                // Aguarda conclusão dos uploads antes de submeter o form
+                myDropzone.on("queuecomplete", function() {
+                    $('#loadingStatus').text('Preparando geração do PDF...');
+                    $('#loadingProgress').css('width', '90%');
+                    
+                    // Preload images before submitting
+                    preloadImages().then(() => {
+                        $('#loadingStatus').text('Gerando PDF...');
+                        $('#loadingProgress').css('width', '100%');
+                        $('#form').submit();
+                    }).catch(error => {
+                        console.error('Error preloading images:', error);
+                        $('#form').submit(); // Submit anyway
+                    });
                 });
-            });
-        } else {
-            // Show modal for regular submission
-            e.preventDefault();
-            $('#pdfLoadingModal').modal('show');
-            
-            // Preload existing album images
-            preloadImages().then(() => {
-                $('#loadingStatus').text('Gerando PDF...');
-                $('#loadingProgress').css('width', '100%');
-                $('#form').submit();
-            });
+                return; // Exit early
+            }
         }
+        
+        // Regular submission (no new files to upload)
+        e.preventDefault();
+        $('#pdfLoadingModal').modal('show');
+        
+        // Preload existing album images
+        preloadImages().then(() => {
+            $('#loadingStatus').text('Gerando PDF...');
+            $('#loadingProgress').css('width', '100%');
+            $('#form').submit();
+        }).catch(error => {
+            console.error('Error preloading images:', error);
+            $('#form').submit(); // Submit anyway on error
+        });
     });
 </script>
