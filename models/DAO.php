@@ -676,6 +676,56 @@ class DAO
 
 		return null;
 	}
+	
+	/**
+	 * Batch query to fetch multiple employees by names
+	 * Optimized to avoid N+1 query problem
+	 */
+	public function buscaFuncionariosPorNomes($nomes)
+	{
+		if (empty($nomes)) {
+			return [];
+		}
+		
+		// Create placeholders for IN clause
+		$placeholders = array_map(function($index) {
+			return ':nome' . $index;
+		}, array_keys($nomes));
+		
+		$query = '
+				select 
+					f.id_funcionario,
+					f.nome,
+					f.cargo,
+					e.id_empresa,
+					e.nome_fantasia
+				from
+					funcionario as f
+				inner join 
+					empresa as e
+				on 
+					f.fk_id_empresa = e.id_empresa
+				where 
+					f.nome IN (' . implode(',', $placeholders) . ')';
+
+		$stmt = $this->db->prepare($query);
+		
+		// Bind parameters
+		foreach ($nomes as $index => $nome) {
+			$stmt->bindValue(':nome' . $index, $nome);
+		}
+		
+		$stmt->execute();
+		$results = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+		
+		// Convert to indexed array by name for easy lookup
+		$funcionarios = [];
+		foreach ($results as $row) {
+			$funcionarios[$row['nome']] = (object) $row;
+		}
+		
+		return $funcionarios;
+	}
 
 	public function pesquisaListaFuncionariosPorNome($nome)
 	{

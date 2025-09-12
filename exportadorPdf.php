@@ -59,9 +59,6 @@ if (isset($_FILES['file']) && isset($_FILES['file']['tmp_name']) && !empty($_FIL
 		$fileName = FileHelper::ensureUniqueFilename($filePath, $fileName);
 		$filePath = "$pathAlbum/$fileName";
 		
-		// Log the sanitized filename for debugging
-		error_log("Original filename: {$currentFile['name']} -> Sanitized: $fileName");
-
 		// Save to database
 		$imagem = new Imagem();
 		$imagem->fk_id_diario_obra = $id_diario_obra;
@@ -72,7 +69,6 @@ if (isset($_FILES['file']) && isset($_FILES['file']['tmp_name']) && !empty($_FIL
 		// Save file to disk
 		if (move_uploaded_file($currentFile['tmp_name'], $filePath)) {
 			$successCount++;
-			error_log("Successfully uploaded image: $fileName to $filePath");
 		} else {
 			$uploadErrors[] = "Falha ao salvar arquivo {$currentFile['name']}";
 			error_log("Failed to save file: $fileName to $filePath");
@@ -140,10 +136,16 @@ if (isset($_FILES['file']) && isset($_FILES['file']['tmp_name']) && !empty($_FIL
 			return trim($nome) != '';
 		}));
 
-		$funcionarios = array_map(function ($nome) use ($dao) {
-			$funcionario = $dao->buscaFuncionarioPorNome($nome);
-			return $funcionario;
+		// Use batch query to fetch all employees at once (performance optimization)
+		$funcionariosMap = $dao->buscaFuncionariosPorNomes($funcionarios);
+		
+		// Convert map back to array maintaining order
+		$funcionarios = array_map(function ($nome) use ($funcionariosMap) {
+			return isset($funcionariosMap[$nome]) ? $funcionariosMap[$nome] : null;
 		}, $funcionarios);
+		
+		// Filter out any null values
+		$funcionarios = array_filter($funcionarios);
 
 		$ret = $dao->deleteTodosFuncionariosDiarioObra($id_diario_obra);
 
@@ -186,8 +188,8 @@ if (isset($_FILES['file']) && isset($_FILES['file']['tmp_name']) && !empty($_FIL
 	error_log("PDF Generation - Date: $data");
 	error_log("PDF Generation - Report Number: $numeroRelatorio");
 	
-	// Increase memory limit for image processing
-	ini_set('memory_limit', '512M');
+	// Optimized memory limit - reduced from 512M
+	ini_set('memory_limit', '256M');
 	error_log("PDF Generation - Memory limit set to: " . ini_get('memory_limit'));
 	
 	$dompdf = new Dompdf();
@@ -195,22 +197,20 @@ if (isset($_FILES['file']) && isset($_FILES['file']['tmp_name']) && !empty($_FIL
 	$options = $dompdf->getOptions();
 	$options->setDefaultFont('DejaVu Sans');
 	
-	// Optimized DOMPDF configuration
+	// Optimized DOMPDF configuration for production
 	$options->set([
 		'isHtml5ParserEnabled' => true,
 		'isRemoteEnabled' => true,
 		'isPhpEnabled' => true,
 		'chroot' => realpath(__DIR__), // Restrict file access to project directory
-		'logOutputFile' => __DIR__ . '/dompdf_log.txt', // Enable DOMPDF logging
 		'enableCssFloat' => true,
 		'enableJavascript' => false,
-		'isPhpEnabled' => true,
 		'tempDir' => sys_get_temp_dir(),
 		'fontDir' => __DIR__ . '/vendor/dompdf/dompdf/lib/fonts/',
 		'fontCache' => __DIR__ . '/vendor/dompdf/dompdf/lib/fonts/',
-		'debugKeepTemp' => true, // Keep temp files for debugging
-		'debugCss' => false, // Disable CSS debugging for production
-		'debugLayout' => false, // Disable layout debugging for production
+		'debugKeepTemp' => false, // Disabled for production - prevents temp file accumulation
+		'debugCss' => false,
+		'debugLayout' => false,
 		'debugLayoutLines' => false,
 		'debugLayoutBlocks' => false,
 		'debugLayoutInline' => false,
@@ -220,7 +220,6 @@ if (isset($_FILES['file']) && isset($_FILES['file']['tmp_name']) && !empty($_FIL
 		'defaultPaperSize' => 'a4',
 		'defaultPaperOrientation' => 'portrait',
 		'isFontSubsettingEnabled' => true,
-		'isRemoteEnabled' => true,
 		'dpi' => 96, // Standard DPI for images
 	]);
 
@@ -228,11 +227,9 @@ if (isset($_FILES['file']) && isset($_FILES['file']['tmp_name']) && !empty($_FIL
 	
 	error_log("PDF Generation - DOMPDF configured with chroot: " . realpath(__DIR__));
 	error_log("PDF Generation - Temp dir: " . sys_get_temp_dir());
-
-	if (($time_diff = microtime(true) - $time_start) < 6.0) {
-		$time_sleep = (int) (6.0 - $time_diff) * 1000000;
-		usleep($time_sleep);
-	}
+	
+	// Images are now preloaded via JavaScript before form submission
+	// No need for artificial delay
 	
 	// Generate HTML with error handling
 	error_log("PDF Generation - Starting HTML generation");
@@ -264,9 +261,7 @@ if (isset($_FILES['file']) && isset($_FILES['file']['tmp_name']) && !empty($_FIL
 		throw new Exception("Failed to generate HTML for PDF: " . $e->getMessage());
 	}
 
-	// Convert encoding and validate HTML
-	$html = mb_convert_encoding($html, 'HTML-ENTITIES', 'UTF-8');
-	
+	// Validate HTML (encoding conversion removed - not needed with UTF-8)
 	if (empty($html) || strlen($html) < 1000) {
 		error_log("PDF Generation ERROR - HTML appears to be empty or too short: " . strlen($html) . " characters");
 		throw new Exception("Generated HTML is invalid or empty");

@@ -51,7 +51,6 @@ function getValidLogoSrc(string $logoUrl): string
 {
 	// Handle empty logo URL
 	if (empty($logoUrl)) {
-		error_log("PDF Logo Processing - Empty logo URL");
 		return '';
 	}
 	
@@ -69,23 +68,19 @@ function getValidLogoSrc(string $logoUrl): string
 	$absolutePath = __DIR__ . '/' . $logoPath . '/' . $fileName;
 	$relativePath = $logoPath . '/' . $fileName;
 	
-	// Logging for debugging
-	error_log("PDF Logo Processing - Original URL: $logoUrl");
-	error_log("PDF Logo Processing - Filename: $fileName");
-	error_log("PDF Logo Processing - Absolute Path: $absolutePath");
-	error_log("PDF Logo Processing - Relative Path: $relativePath");
-	error_log("PDF Logo Processing - File Exists: " . (file_exists($absolutePath) ? 'YES' : 'NO'));
+	// Reduced logging - only log errors
+	if (!file_exists($absolutePath)) {
+		error_log("PDF Logo Processing - Missing file: $absolutePath (URL: $logoUrl)");
+	}
 	
 	// Check if file exists locally
 	if (!file_exists($absolutePath)) {
-		error_log("DOMPDF ERROR: Missing logo file: $absolutePath (original URL: $logoUrl)");
 		// Return empty string for missing logos
 		return '';
 	}
 	
 	// Get file size for optimization decisions
 	$fileSize = filesize($absolutePath);
-	error_log("PDF Logo Processing - File size: " . round($fileSize / 1024, 2) . "KB");
 	
 	// For large logos (>500KB), use base64 to ensure compatibility
 	if ($fileSize > 512000) {
@@ -100,12 +95,10 @@ function getValidLogoSrc(string $logoUrl): string
 		
 		$mimeType = $imageType === 'jpg' || $imageType === 'jpeg' ? 'image/jpeg' : 'image/' . $imageType;
 		$base64 = base64_encode($imageData);
-		error_log("PDF Logo Processing - Using base64 for large logo: $fileName");
 		return 'data:' . $mimeType . ';base64,' . $base64;
 	}
 	
 	// Return relative path for DOMPDF
-	error_log("PDF Logo Processing - Using relative path: $relativePath");
 	return $relativePath;
 }
 
@@ -130,12 +123,7 @@ function getValidImageSrc(string $imageUrl): string
 	$absolutePath = __DIR__ . '/' . $photoStoragePath . '/' . $fileName;
 	$relativePath = $photoStoragePath . '/' . $fileName;
 	
-	// Comprehensive logging for debugging
-	error_log("PDF Image Processing - Original URL: $imageUrl");
-	error_log("PDF Image Processing - Filename: $fileName");
-	error_log("PDF Image Processing - Absolute Path: $absolutePath");
-	error_log("PDF Image Processing - Relative Path: $relativePath");
-	error_log("PDF Image Processing - File Exists: " . (file_exists($absolutePath) ? 'YES' : 'NO'));
+	// Reduced logging - only log errors
 	
 	// Check if file exists locally
 	if (!file_exists($absolutePath)) {
@@ -163,7 +151,6 @@ function getValidImageSrc(string $imageUrl): string
 	
 	// Check file size for memory optimization
 	$fileSize = filesize($absolutePath);
-	error_log("PDF Image Processing - File size: $fileSize bytes");
 	
 	// For large images (>2MB), use base64 to ensure compatibility
 	if ($fileSize > 2097152) {
@@ -171,12 +158,10 @@ function getValidImageSrc(string $imageUrl): string
 		$imageType = pathinfo($absolutePath, PATHINFO_EXTENSION);
 		$mimeType = $imageType === 'jpg' || $imageType === 'jpeg' ? 'image/jpeg' : 'image/' . $imageType;
 		$base64 = base64_encode($imageData);
-		error_log("PDF Image Processing - Using base64 for large image: $fileName");
 		return 'data:' . $mimeType . ';base64,' . $base64;
 	}
 	
 	// Return relative path for DOMPDF (relative to chroot directory)
-	error_log("PDF Image Processing - Returning relative path: $relativePath");
 	return $relativePath;
 }
 

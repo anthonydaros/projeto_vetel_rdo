@@ -924,6 +924,26 @@ function downloadFile($localFile)
                 
             </form>
         </div>
+        
+        <!-- Loading Modal for PDF Generation -->
+        <div class="modal fade" id="pdfLoadingModal" tabindex="-1" role="dialog" aria-labelledby="pdfLoadingModalLabel" aria-hidden="true" data-backdrop="static" data-keyboard="false">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+                <div class="modal-content">
+                    <div class="modal-body text-center py-4">
+                        <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+                            <span class="sr-only">Carregando...</span>
+                        </div>
+                        <h5 class="modal-title mb-2" id="pdfLoadingModalLabel">Preparando PDF</h5>
+                        <p class="mb-1" id="loadingStatus">Verificando imagens...</p>
+                        <div class="progress mx-auto" style="width: 80%; height: 20px;">
+                            <div id="loadingProgress" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <small class="text-muted mt-2 d-block" id="loadingDetails">Aguarde...</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
     </body>
 </html>
 <script>   
@@ -1130,7 +1150,54 @@ function downloadFile($localFile)
     // Inicializar contagem
     updatePhotoCount();
     
-    // Botão de submit atualizado
+    // Image preloading function
+    function preloadImages() {
+        return new Promise((resolve, reject) => {
+            // Get all images from the album
+            const albumImages = [];
+            <?php if (!empty($album)) { 
+                foreach ($album as $img) { ?>
+                    albumImages.push('<?php echo htmlspecialchars($pathAlbum . '/' . $img['url']) ?>');
+            <?php }} ?>
+            
+            if (albumImages.length === 0) {
+                resolve();
+                return;
+            }
+            
+            let loadedCount = 0;
+            const totalImages = albumImages.length;
+            
+            // Update modal with progress
+            $('#loadingStatus').text('Carregando imagens do álbum...');
+            $('#loadingDetails').text(`0 de ${totalImages} imagens carregadas`);
+            
+            albumImages.forEach((src, index) => {
+                const img = new Image();
+                img.onload = () => {
+                    loadedCount++;
+                    const progress = Math.round((loadedCount / totalImages) * 100);
+                    $('#loadingProgress').css('width', progress + '%').attr('aria-valuenow', progress);
+                    $('#loadingDetails').text(`${loadedCount} de ${totalImages} imagens carregadas`);
+                    
+                    if (loadedCount === totalImages) {
+                        $('#loadingStatus').text('Imagens carregadas com sucesso!');
+                        setTimeout(resolve, 500); // Small delay for user feedback
+                    }
+                };
+                img.onerror = () => {
+                    loadedCount++;
+                    console.warn(`Failed to preload image: ${src}`);
+                    if (loadedCount === totalImages) {
+                        resolve(); // Continue even if some images fail
+                    }
+                };
+                img.src = src;
+            });
+        });
+    }
+    
+    // Botão de submit atualizado com modal loader
     $('#submit').on('click', function(e) {
         const filesAccepted = myDropzone.getAcceptedFiles().length;
         const filesQueued = myDropzone.getQueuedFiles().length;
@@ -1139,16 +1206,36 @@ function downloadFile($localFile)
             e.preventDefault();
             $('#existeAlbum').val(1);
             
+            // Show loading modal
+            $('#pdfLoadingModal').modal('show');
+            $('#loadingStatus').text('Fazendo upload das imagens...');
+            
             // Processa fila de upload
             myDropzone.processQueue();
             
             // Aguarda conclusão dos uploads antes de submeter o form
             myDropzone.on("queuecomplete", function() {
-                $('#form').submit();
+                $('#loadingStatus').text('Preparando geração do PDF...');
+                $('#loadingProgress').css('width', '90%');
+                
+                // Preload images before submitting
+                preloadImages().then(() => {
+                    $('#loadingStatus').text('Gerando PDF...');
+                    $('#loadingProgress').css('width', '100%');
+                    $('#form').submit();
+                });
             });
         } else {
-            // Sem arquivos para upload, submete normalmente
-            $('#form').submit();
+            // Show modal for regular submission
+            e.preventDefault();
+            $('#pdfLoadingModal').modal('show');
+            
+            // Preload existing album images
+            preloadImages().then(() => {
+                $('#loadingStatus').text('Gerando PDF...');
+                $('#loadingProgress').css('width', '100%');
+                $('#form').submit();
+            });
         }
     });
 </script>
