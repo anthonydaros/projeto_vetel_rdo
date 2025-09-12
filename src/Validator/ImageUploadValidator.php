@@ -20,7 +20,7 @@ class ImageUploadValidator extends FileUploadValidator
 	public function __construct(array $file, array $config = [])
 	{
 		$defaultConfig = array_merge([
-			'max_size' => 5 * 1024 * 1024, // 5MB
+			'max_size' => 10 * 1024 * 1024, // 10MB
 			'allowed_types' => [
 				'image/jpeg',
 				'image/jpg',

@@ -33,7 +33,7 @@ class ImageUploadService
 			'generate_thumbnails' => true,
 			'optimize_images' => true,
 			'allowed_formats' => ['jpg', 'jpeg', 'png', 'webp'],
-			'max_size' => 5 * 1024 * 1024, // 5MB
+			'max_size' => 10 * 1024 * 1024, // 10MB
 		], $config);
 	}
 

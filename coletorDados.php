@@ -202,6 +202,10 @@ function downloadFile($localFile)
         <script src="js/bootstrap4.5.2.min.js"></script>
         <link rel="stylesheet" href="dropzone-5.7.0/dist/dropzone.css" />
         <script src="dropzone-5.7.0/dist/dropzone.js"></script>
+        <script>
+            // Desabilita o autoDiscover do Dropzone para evitar conflitos
+            Dropzone.autoDiscover = false;
+        </script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js" integrity="sha512-pHVGpX7F/27yZ0ISY+VVjyULApbDlD0/X0rgGbTqCE7WFW5MezNTWG/dnhtbBuICzsd0WQPgpE4REBLv+UqChw==" crossorigin="anonymous"></script>
         <style>
             .table td {
@@ -883,12 +887,12 @@ function downloadFile($localFile)
 
                 <input type="hidden" id="existeAlbum" name="existeAlbum" value="0">
 
-                <input type="submit"
+                <button type="button"
                     id="submit"
                     style="cursor: pointer; z-index: 1000; position: relative;"
-                    class="btn btn-primary float-right mb-5"
-                    name="submit"
-                    value="Gerar Relatório">
+                    class="btn btn-primary float-right mb-5">
+                    Gerar Relatório
+                </button>
 
                 <?php if (!empty($album)) { ?>
                     <div class="dropdown clearfix float-right mb-5 py-0">
@@ -960,7 +964,7 @@ function downloadFile($localFile)
         thumbnailWidth: 100,
         thumbnailHeight: 100,
         acceptedFiles: '.jpeg,.jpg,.png,.webp', // Adicionado WebP
-        maxFilesize: 5, // 5MB máximo
+        maxFilesize: 10, // 10MB máximo
         
         // Mensagens em português
         dictMaxFilesExceeded: 'Máximo de 20 fotos permitido',
@@ -968,7 +972,7 @@ function downloadFile($localFile)
         dictFileTooBig: 'Arquivo muito grande ({{filesize}}MB). Máximo: {{maxFilesize}}MB',
         dictRemoveFile: 'Excluir',
         dictCancelUpload: 'Cancelar',
-        dictDefaultMessage: '<small class="font-italic text-center">UPLOAD DE FOTOS OTIMIZADAS<br/>(MAX. 20 FOTOS - 5MB cada)</small>',
+        dictDefaultMessage: '<small class="font-italic text-center">UPLOAD DE FOTOS OTIMIZADAS<br/>(MAX. 20 FOTOS - 10MB cada)</small>',
         
         addRemoveLinks: true,
         
@@ -1246,32 +1250,50 @@ function downloadFile($localFile)
                         $('#loadingProgress').css('width', '100%');
                         
                         setTimeout(() => {
-                            // Submit the form directly using native method
+                            // Create a hidden input for PDF generation flag
+                            if (!$('#form input[name="pdf_submit"]').length) {
+                            $('<input>').attr({
+                            type: 'hidden',
+                            name: 'pdf_submit',
+                            value: '1'
+                            }).appendTo('#form');
+                            }
+                            
+                            // Submit the form using POST
                             const form = document.getElementById('form');
-                            if (form && typeof form.submit === 'function') {
+                            if (form) {
                                 // Remove any jQuery event handlers
                                 $(form).off('submit');
-                                // Use native submit
-                                form.submit();
+                                // Ensure POST method
+                                form.method = 'POST';
+                                // Use HTMLFormElement.prototype.submit to bypass any override
+                                HTMLFormElement.prototype.submit.call(form);
                             } else {
-                                console.error('Form not found or submit not available');
-                                // Fallback: try to submit using action attribute
-                                window.location.href = 'exportadorPdf.php?' + $(form).serialize() + '&submit=1';
+                                console.error('Form not found!');
                             }
                         }, 200);
                     }).catch(error => {
                         console.error('Error preloading images:', error);
-                        // Submit the form directly using native method
+                        // Create a hidden input for PDF generation flag
+                        if (!$('#form input[name="pdf_submit"]').length) {
+                            $('<input>').attr({
+                                type: 'hidden',
+                                name: 'pdf_submit',
+                                value: '1'
+                            }).appendTo('#form');
+                        }
+                        
+                        // Submit the form using POST
                         const form = document.getElementById('form');
-                        if (form && typeof form.submit === 'function') {
+                        if (form) {
                             // Remove any jQuery event handlers
                             $(form).off('submit');
-                            // Use native submit
-                            form.submit();
+                            // Ensure POST method
+                            form.method = 'POST';
+                            // Use HTMLFormElement.prototype.submit to bypass any override
+                            HTMLFormElement.prototype.submit.call(form);
                         } else {
-                            console.error('Form not found or submit not available');
-                            // Fallback: try to submit using action attribute
-                            window.location.href = 'exportadorPdf.php?' + $(form).serialize() + '&submit=1';
+                            console.error('Form not found!');
                         }
                     });
                 });
@@ -1292,32 +1314,50 @@ function downloadFile($localFile)
             // Small delay to show completion message
             setTimeout(() => {
                 console.log('Submitting form now...');
-                // Submit the form directly using native method
+                // Create a hidden input for PDF generation flag
+                if (!$('#form input[name="pdf_submit"]').length) {
+                    $('<input>').attr({
+                        type: 'hidden',
+                        name: 'pdf_submit',
+                        value: '1'
+                    }).appendTo('#form');
+                }
+                
+                // Submit the form using POST
                 const form = document.getElementById('form');
-                if (form && typeof form.submit === 'function') {
+                if (form) {
                     // Remove any jQuery event handlers
                     $(form).off('submit');
-                    // Use native submit
-                    form.submit();
+                    // Ensure POST method
+                    form.method = 'POST';
+                    // Use HTMLFormElement.prototype.submit to bypass any override
+                    HTMLFormElement.prototype.submit.call(form);
                 } else {
-                    console.error('Form not found or submit not available');
-                    // Fallback: try to submit using action attribute
-                    window.location.href = 'exportadorPdf.php?' + $(form).serialize() + '&submit=1';
+                    console.error('Form not found!');
                 }
             }, 200);
         }).catch(error => {
             console.error('Error preloading images:', error);
-            // Submit the form directly using native method
+            // Create a hidden input for PDF generation flag
+            if (!$('#form input[name="pdf_submit"]').length) {
+                $('<input>').attr({
+                    type: 'hidden',
+                    name: 'pdf_submit',
+                    value: '1'
+                }).appendTo('#form');
+            }
+            
+            // Submit the form using POST
             const form = document.getElementById('form');
-            if (form && typeof form.submit === 'function') {
+            if (form) {
                 // Remove any jQuery event handlers
                 $(form).off('submit');
-                // Use native submit
-                form.submit();
+                // Ensure POST method
+                form.method = 'POST';
+                // Use HTMLFormElement.prototype.submit to bypass any override
+                HTMLFormElement.prototype.submit.call(form);
             } else {
-                console.error('Form not found or submit not available');
-                // Fallback: try to submit using action attribute
-                window.location.href = 'exportadorPdf.php?' + $(form).serialize() + '&submit=1';
+                console.error('Form not found!');
             }
         });
     });

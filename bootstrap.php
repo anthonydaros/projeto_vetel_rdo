@@ -152,7 +152,7 @@ $container->singleton('image.upload', function () use ($container) {
 		[
 			'base_path' => __DIR__ . '/img/album',
 			'max_files_per_diario' => 20,
-			'max_size' => 5 * 1024 * 1024
+			'max_size' => 10 * 1024 * 1024
 		]
 	);
 });

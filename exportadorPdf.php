@@ -85,7 +85,7 @@ if (isset($_FILES['file']) && isset($_FILES['file']['tmp_name']) && !empty($_FIL
 		// You could store these errors in session to display to user
 		// $_SESSION['upload_errors'] = $uploadErrors;
 	}
-} elseif (isset($_POST['submit'])) {
+} elseif (isset($_POST['submit']) || isset($_POST['pdf_submit'])) {
 	$time_start = microtime(true);
 
 	extract($_POST);

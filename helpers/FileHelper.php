@@ -170,7 +170,7 @@ class FileHelper
      * @param int $maxSize Maximum size in bytes (default 5MB)
      * @return array ['valid' => bool, 'error' => string|null]
      */
-    public static function validateImageUpload(array $file, int $maxSize = 5242880): array
+    public static function validateImageUpload(array $file, int $maxSize = 10485760): array
     {
         // Check for upload errors
         if ($file['error'] !== UPLOAD_ERR_OK) {
