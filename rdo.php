@@ -149,22 +149,9 @@ function getValidImageSrc(string $imageUrl): string
 		);
 	}
 	
-	// First, try to use HTTP URL if images are publicly accessible
-	// This is more efficient for DOMPDF
-	if (isset($_SERVER['HTTP_HOST'])) {
-		$protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
-		$fullHttpUrl = $protocol . $_SERVER['HTTP_HOST'] . '/' . $httpUrl;
-		
-		// Test if URL is accessible
-		$headers = @get_headers($fullHttpUrl);
-		if ($headers && strpos($headers[0], '200') !== false) {
-			error_log("PDF Image Processing - Using HTTP URL: $fullHttpUrl");
-			return $fullHttpUrl;
-		}
-	}
-	
-	// Fallback to base64 encoding if HTTP access fails
-	// This ensures compatibility when images are not publicly accessible
+	// For PDF generation, always use base64 encoding for reliability
+	// The HTTP URL approach can fail due to network issues or timeouts
+	// Base64 ensures the images are embedded directly in the PDF
 	try {
 		error_log("PDF Image Processing - Using base64 encoding for: $fileName");
 		$imageData = file_get_contents($absolutePath);
