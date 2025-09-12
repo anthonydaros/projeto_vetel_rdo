@@ -1,6 +1,5 @@
 <?php
-    require_once __DIR__ . '/vendor/autoload.php';
-    require_once __DIR__ . '/startup.php';
+    require_once __DIR__ . '/bootstrap.php'; // Nova arquitetura
     require_once __DIR__ . '/ftpFunctions.php';
     
     use Models\Empresa;
@@ -9,6 +8,38 @@
     use Models\DiarioObra;
     use Models\Obra;
     use Dompdf\Dompdf;
+    use Src\Service\ImageUploadService;
+    use Src\Exception\ServiceException;
+    
+    // Nova lógica de upload de imagens
+    if (isset($_FILES['file']) && isset($_POST['id_diario_obra'])) {
+        try {
+            $imageUploadService = app('image.upload');
+            $diarioId = (int) $_POST['id_diario_obra'];
+            
+            // Processo de upload usando nova arquitetura
+            $result = $imageUploadService->uploadImageForDiario($_FILES['file'], $diarioId);
+            
+            // Resposta para Dropzone
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => true,
+                'message' => 'Imagem enviada com sucesso',
+                'image_id' => $result['image_id'],
+                'filename' => $result['filename']
+            ]);
+            exit;
+            
+        } catch (ServiceException $e) {
+            header('HTTP/1.1 400 Bad Request');
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => false,
+                'error' => $e->getUserMessage()
+            ]);
+            exit;
+        }
+    }
     
     if (isset($_GET['id_diario_obra']))
     {
@@ -48,16 +79,35 @@
         }
         else if (isset($_GET['remover_album']) && $_GET['remover_album'] == 1)
         {
-            foreach ($album as $foto)
-            {
-                unlink($foto['url']);
+            try {
+                $imageUploadService = app('image.upload');
+                $diarioId = (int) $_GET['id_diario_obra'];
+                
+                // Remove todas as imagens usando nova arquitetura
+                $result = $imageUploadService->deleteAllImagesFromDiario($diarioId);
+                
+                // Fallback: remove imagens restantes do modo legacy
+                foreach ($album as $foto) {
+                    if (file_exists($foto['url'])) {
+                        unlink($foto['url']);
+                    }
+                }
+                
+                // Remove registros legacy do banco
+                $dao->deleteAlbum($diarioId);
+                
+            } catch (ServiceException $e) {
+                // Em caso de erro, usa método legacy
+                foreach ($album as $foto) {
+                    if (file_exists($foto['url'])) {
+                        unlink($foto['url']);
+                    }
+                }
+                $dao->deleteAlbum($_GET['id_diario_obra']);
             }
 
-            $ret = $dao->deleteAlbum($_GET['id_diario_obra']);
-
             header("Location: coletorDados.php?id_diario_obra={$_GET['id_diario_obra']}");
-
-            die();
+            exit;
         }
     
         $contratante = $dao->buscaEmpresaPorId($diarioObra->fk_id_contratante);
@@ -166,8 +216,8 @@
         <script src="js/jquery3.5.1.min.js"></script>
         <script src="js/popper.min.js"></script>
         <script src="js/bootstrap4.5.2.min.js"></script>
-        <link rel="stylesheet" href="./dropzone-5.7.0/dist/min/dropzone.min.css">
-        <script src="./dropzone-5.7.0/dist/min/dropzone.min.js"></script>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/6.0.0-beta.2/dropzone.min.css" integrity="sha512-61eWJhbs/2KkJ2JhEkOdDT8Zu7MwXMhZ1gLNzIx6g7DU+R8VYJy2fQ0JOHHGi3GYKuLsEZo9pV8cWWUjdHpvew==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/6.0.0-beta.2/dropzone-min.js" integrity="sha512-FFyRTpBn3Gly5HfClQk4DiY8DSUJJw0BT2wwxKuOyVyVvRUV1WPL/+oJ97qEAi4MaOl6/F0f4+j2PYmJXL4Jog==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js" integrity="sha512-pHVGpX7F/27yZ0ISY+VVjyULApbDlD0/X0rgGbTqCE7WFW5MezNTWG/dnhtbBuICzsd0WQPgpE4REBLv+UqChw==" crossorigin="anonymous"></script>
         <style>
             .table td {
@@ -881,40 +931,87 @@
     </body>
 </html>
 <script>   
-    $("#dropzoneAlbum").dropzone(
-        { 
-            url: 'exportadorPdf.php',
-            method: 'POST',
-            dictMaxFilesExceeded: 'Máximo de 12 fotos permitido',
-            maxFiles: 12,
-            uploadMultiple: true,
-            parallelUploads: 12,
-            timeout: 0,
-            dictCancelUpload: '',
-            autoProcessQueue: false,
-            thumbnailWidth: 100,
-            thumbnailHeight: 100,
-            acceptedFiles: '.jpeg, .jpg, .png',
-            dictInvalidFileType: 'Extensões permitidas: jpg, jpeg e png',
-            dictRemoveFile: 'Excluir',
-            dictDefaultMessage: '<small class="font-italic text-center">UPLOAD DO PACK DE FOTOS </br>(MAX. 12 FOTOS)</small>', 
-            addRemoveLinks: true,
-            sending: function(file, xhr, formData) {
+    // Configuração Dropzone 6.0 com nova arquitetura
+    const dropzoneConfig = {
+        url: 'coletorDados.php', // Upload endpoint atualizado
+        method: 'POST',
+        maxFiles: 20, // Aumentado para 20 conforme nova configuração
+        uploadMultiple: false, // Upload individual para melhor controle
+        parallelUploads: 3, // Reduzido para evitar sobrecarga
+        timeout: 60000, // 60 segundos timeout
+        autoProcessQueue: false,
+        thumbnailWidth: 100,
+        thumbnailHeight: 100,
+        acceptedFiles: '.jpeg,.jpg,.png,.webp', // Adicionado WebP
+        maxFilesize: 5, // 5MB máximo
+        
+        // Mensagens em português
+        dictMaxFilesExceeded: 'Máximo de 20 fotos permitido',
+        dictInvalidFileType: 'Extensões permitidas: jpg, jpeg, png, webp',
+        dictFileTooBig: 'Arquivo muito grande ({{filesize}}MB). Máximo: {{maxFilesize}}MB',
+        dictRemoveFile: 'Excluir',
+        dictCancelUpload: 'Cancelar',
+        dictDefaultMessage: '<small class="font-italic text-center">UPLOAD DE FOTOS OTIMIZADAS<br/>(MAX. 20 FOTOS - 5MB cada)</small>',
+        
+        addRemoveLinks: true,
+        
+        init: function() {
+            const dz = this;
+            
+            // Adiciona ID do diário a cada upload
+            dz.on("sending", function(file, xhr, formData) {
                 formData.append("id_diario_obra", <?php echo htmlspecialchars($diarioObra->id_diario_obra) ?>);
-            }
+            });
+            
+            // Callback de sucesso
+            dz.on("success", function(file, response) {
+                console.log("Upload sucesso:", response);
+                if (response.success) {
+                    file.serverId = response.image_id;
+                    file.filename = response.filename;
+                }
+            });
+            
+            // Callback de erro
+            dz.on("error", function(file, message) {
+                console.error("Upload erro:", message);
+                if (typeof message === 'object' && message.error) {
+                    dz.emit("errormultiple", [file], message.error);
+                }
+            });
+            
+            // Remove arquivo do servidor quando removido da interface
+            dz.on("removedfile", function(file) {
+                if (file.serverId) {
+                    // TODO: Implementar endpoint de remoção individual
+                    console.log("Removendo arquivo:", file.serverId);
+                }
+            });
         }
-    );
+    };
 
-    let dropzonAlbum = Dropzone.forElement("#dropzoneAlbum");
+    // Inicializa Dropzone 6.0
+    const myDropzone = new Dropzone("#dropzoneAlbum", dropzoneConfig);
     
+    // Botão de submit atualizado
     $('#submit').on('click', function(e) {
-        let filesAccepted = dropzonAlbum.getAcceptedFiles().length;
-        if (filesAccepted > 0 && filesAccepted <= 12)
-        {
-            $('#existeAlbum').val(1)
-            dropzonAlbum.processQueue();
+        const filesAccepted = myDropzone.getAcceptedFiles().length;
+        const filesQueued = myDropzone.getQueuedFiles().length;
+        
+        if (filesQueued > 0) {
+            e.preventDefault();
+            $('#existeAlbum').val(1);
+            
+            // Processa fila de upload
+            myDropzone.processQueue();
+            
+            // Aguarda conclusão dos uploads antes de submeter o form
+            myDropzone.on("queuecomplete", function() {
+                $('#form').submit();
+            });
+        } else {
+            // Sem arquivos para upload, submete normalmente
+            $('#form').submit();
         }
-
-        $('#form').submit();
-    })
+    });
 </script>
