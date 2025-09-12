@@ -1210,8 +1210,14 @@ function downloadFile($localFile)
         });
     }
     
+    // Flag to track if we're submitting the form
+    let isSubmittingForm = false;
+    
     // Botão de submit atualizado com modal loader
     $('#submit').on('click', function(e) {
+        // Set flag to indicate we're submitting
+        isSubmittingForm = true;
+        
         // Check if Dropzone exists
         if (typeof myDropzone !== 'undefined') {
             const filesAccepted = myDropzone.getAcceptedFiles().length;
@@ -1235,12 +1241,38 @@ function downloadFile($localFile)
                     
                     // Preload images before submitting
                     preloadImages().then(() => {
+                        console.log('Dropzone images preloaded, submitting form...');
                         $('#loadingStatus').text('Gerando PDF...');
                         $('#loadingProgress').css('width', '100%');
-                        $('#form').submit();
+                        
+                        setTimeout(() => {
+                            // Submit the form directly using native method
+                            const form = document.getElementById('form');
+                            if (form && typeof form.submit === 'function') {
+                                // Remove any jQuery event handlers
+                                $(form).off('submit');
+                                // Use native submit
+                                form.submit();
+                            } else {
+                                console.error('Form not found or submit not available');
+                                // Fallback: try to submit using action attribute
+                                window.location.href = 'exportadorPdf.php?' + $(form).serialize() + '&submit=1';
+                            }
+                        }, 200);
                     }).catch(error => {
                         console.error('Error preloading images:', error);
-                        $('#form').submit(); // Submit anyway
+                        // Submit the form directly using native method
+                        const form = document.getElementById('form');
+                        if (form && typeof form.submit === 'function') {
+                            // Remove any jQuery event handlers
+                            $(form).off('submit');
+                            // Use native submit
+                            form.submit();
+                        } else {
+                            console.error('Form not found or submit not available');
+                            // Fallback: try to submit using action attribute
+                            window.location.href = 'exportadorPdf.php?' + $(form).serialize() + '&submit=1';
+                        }
                     });
                 });
                 return; // Exit early
@@ -1253,12 +1285,40 @@ function downloadFile($localFile)
         
         // Preload existing album images
         preloadImages().then(() => {
+            console.log('Images preloaded successfully, submitting form...');
             $('#loadingStatus').text('Gerando PDF...');
             $('#loadingProgress').css('width', '100%');
-            $('#form').submit();
+            
+            // Small delay to show completion message
+            setTimeout(() => {
+                console.log('Submitting form now...');
+                // Submit the form directly using native method
+                const form = document.getElementById('form');
+                if (form && typeof form.submit === 'function') {
+                    // Remove any jQuery event handlers
+                    $(form).off('submit');
+                    // Use native submit
+                    form.submit();
+                } else {
+                    console.error('Form not found or submit not available');
+                    // Fallback: try to submit using action attribute
+                    window.location.href = 'exportadorPdf.php?' + $(form).serialize() + '&submit=1';
+                }
+            }, 200);
         }).catch(error => {
             console.error('Error preloading images:', error);
-            $('#form').submit(); // Submit anyway on error
+            // Submit the form directly using native method
+            const form = document.getElementById('form');
+            if (form && typeof form.submit === 'function') {
+                // Remove any jQuery event handlers
+                $(form).off('submit');
+                // Use native submit
+                form.submit();
+            } else {
+                console.error('Form not found or submit not available');
+                // Fallback: try to submit using action attribute
+                window.location.href = 'exportadorPdf.php?' + $(form).serialize() + '&submit=1';
+            }
         });
     });
 </script>
