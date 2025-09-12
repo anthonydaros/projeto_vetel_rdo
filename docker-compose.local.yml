@@ -1,0 +1,52 @@
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: vetel_db
+      MYSQL_USER: vetel_user
+      MYSQL_PASSWORD: vetel_pass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - vetel_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    environment:
+      DB_HOST: mysql
+      DB_NAME: vetel_db
+      DB_USER: vetel_user
+      DB_PASSWORD: vetel_pass
+      APP_ENV: development
+      APP_DEBUG: true
+      TIMEZONE: America/Sao_Paulo
+    volumes:
+      - ./img/album:/var/www/html/img/album
+      - ./relatorios:/var/www/html/relatorios
+      - logs:/var/log/apache2
+      - sessions:/var/www/sessions
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - vetel_network
+
+volumes:
+  mysql_data:
+  logs:
+  sessions:
+
+networks:
+  vetel_network:
+    driver: bridge

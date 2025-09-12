@@ -11,11 +11,11 @@ services:
     # Environment variables for Coolify
     environment:
       # Database Configuration (External MySQL) - REQUIRED
-      - DB_HOST=${DB_HOST:?}
-      - DB_PORT=${DB_PORT:?3306}
-      - DB_DATABASE=${DB_DATABASE:?formulario_bd}
-      - DB_USERNAME=${DB_USERNAME:?}
-      - DB_PASSWORD=${DB_PASSWORD:?}
+      - DB_HOST=103.199.185.165
+      - DB_PORT=5987
+      - DB_NAME=default
+      - DB_USER=mariadb
+      - DB_PASSWORD=hr6nhoC6TWfMyAoFZbhB4TPsKoomu00U0gGov1MIsiTihJiG4KTBYXJrpzW2g1n8
       - DB_CHARSET=utf8
       
       # Application Settings

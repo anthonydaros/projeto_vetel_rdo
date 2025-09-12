@@ -24,7 +24,13 @@ class Config
 
 		$envFile = dirname(__DIR__) . '/.env';
 
+		// In production/Docker, we use environment variables directly
 		if (!file_exists($envFile)) {
+			// Don't throw error if running in container with environment variables
+			if (getenv('DB_HOST') !== false) {
+				self::$loaded = true;
+				return;
+			}
 			throw new \RuntimeException('.env file not found. Please copy .env.example to .env and configure it.');
 		}
 

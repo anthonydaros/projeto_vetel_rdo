@@ -3,23 +3,19 @@ set -e
 
 # Wait for MySQL to be ready
 echo "Waiting for MySQL to be ready..."
-until mysql -h"${DB_HOST:-mysql}" -u"${DB_USER:-root}" -p"${DB_PASSWORD:-root}" -e "SELECT 1" >/dev/null 2>&1; do
+until mysql -h"${DB_HOST:-mysql}" -P"${DB_PORT:-3306}" -u"${DB_USER:-root}" -p"${DB_PASSWORD:-root}" -e "SELECT 1" >/dev/null 2>&1; do
     echo "MySQL is not ready yet. Waiting..."
     sleep 2
 done
 echo "MySQL is ready!"
 
-# Create database if it doesn't exist
-echo "Creating database if not exists..."
-mysql -h"${DB_HOST:-mysql}" -u"${DB_USER:-root}" -p"${DB_PASSWORD:-root}" -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME:-vetel_db} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-
 # Run SQL initialization script if database is empty
 echo "Checking if database needs initialization..."
-TABLE_COUNT=$(mysql -h"${DB_HOST:-mysql}" -u"${DB_USER:-root}" -p"${DB_PASSWORD:-root}" -D"${DB_NAME:-vetel_db}" -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='${DB_NAME:-vetel_db}';" -s -N)
+TABLE_COUNT=$(mysql -h"${DB_HOST:-mysql}" -P"${DB_PORT:-3306}" -u"${DB_USER:-root}" -p"${DB_PASSWORD:-root}" -D"${DB_NAME:-vetel_db}" -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='${DB_NAME:-vetel_db}';" -s -N)
 
 if [ "$TABLE_COUNT" -eq 0 ]; then
     echo "Database is empty. Running initialization script..."
-    mysql -h"${DB_HOST:-mysql}" -u"${DB_USER:-root}" -p"${DB_PASSWORD:-root}" -D"${DB_NAME:-vetel_db}" < /var/www/html/sql/formulario_bd.sql
+    mysql -h"${DB_HOST:-mysql}" -P"${DB_PORT:-3306}" -u"${DB_USER:-root}" -p"${DB_PASSWORD:-root}" -D"${DB_NAME:-vetel_db}" < /var/www/html/sql/formulario_bd.sql
     echo "Database initialized successfully!"
 else
     echo "Database already initialized (found $TABLE_COUNT tables)."
