@@ -1,4 +1,11 @@
 <?php
+// Configurações de upload - define limites maiores
+ini_set('upload_max_filesize', '10M');
+ini_set('post_max_size', '100M');
+ini_set('max_file_uploads', '20');
+ini_set('memory_limit', '256M');
+ini_set('max_execution_time', '300');
+
 // require_once __DIR__ . '/bootstrap.php'; // Nova arquitetura - temporariamente desabilitado
 require_once __DIR__ . '/startup.php'; // Includes e DAO
 require_once __DIR__ . '/ftpFunctions.php';
@@ -16,13 +23,94 @@ if (isset($_FILES['file']) && isset($_POST['id_diario_obra'])) {
 	try {
 		$diarioId = (int) $_POST['id_diario_obra'];
 		
+		// Debug info
+		error_log("Upload attempt for diario: " . $diarioId);
+		error_log("File info: " . print_r($_FILES['file'], true));
+		
+		// Debug - verifica limites atuais
+		error_log("PHP Upload Limits - Max filesize: " . ini_get('upload_max_filesize') . ", Post max: " . ini_get('post_max_size'));
+		error_log("File size received: " . (isset($_FILES['file']['size']) ? $_FILES['file']['size'] : 'N/A'));
+		
+		// Validate upload
+		if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
+			$uploadError = isset($_FILES['file']['error']) ? $_FILES['file']['error'] : 'No file';
+			
+			// Mensagens de erro mais claras com limites atuais
+			$currentLimit = ini_get('upload_max_filesize');
+			$errorMessages = [
+				UPLOAD_ERR_INI_SIZE => 'Arquivo muito grande. Máximo permitido pelo servidor: ' . $currentLimit . '. Reinicie o servidor com: php -c php.ini -S localhost:8000',
+				UPLOAD_ERR_FORM_SIZE => 'Arquivo excede o tamanho máximo do formulário',
+				UPLOAD_ERR_PARTIAL => 'Upload incompleto. Tente novamente',
+				UPLOAD_ERR_NO_FILE => 'Nenhum arquivo foi enviado',
+				UPLOAD_ERR_NO_TMP_DIR => 'Erro no servidor: diretório temporário ausente',
+				UPLOAD_ERR_CANT_WRITE => 'Erro ao gravar arquivo no servidor',
+				UPLOAD_ERR_EXTENSION => 'Upload bloqueado por extensão PHP'
+			];
+			
+			error_log("Upload error code: " . $uploadError);
+			$errorMsg = isset($errorMessages[$uploadError]) ? $errorMessages[$uploadError] : 'Erro desconhecido no upload: ' . $uploadError;
+			throw new Exception($errorMsg);
+		}
+		
 		// Usa DAO diretamente por enquanto
 		$pdo = Connection::getPDO();
 		$dao = new DAO($pdo);
 		$album = $dao->buscaAlbumDiario($diarioId);
+		
+		// Generate unique filename with proper extension
+		$originalName = $_FILES['file']['name'];
+		$extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+		if (!in_array($extension, ['jpg', 'jpeg', 'png', 'webp'])) {
+			$extension = 'jpg'; // Default to jpg
+		}
+		
 		$imageIndex = count($album);
-		$filename = "diario-{$diarioId}-foto-{$imageIndex}.jpg";
-		$uploadPath = __DIR__ . '/img/album/' . $filename;
+		$maxAttempts = 100;
+		for ($i = $imageIndex; $i < $imageIndex + $maxAttempts; $i++) {
+			$filename = "diario-{$diarioId}-foto-{$i}.{$extension}";
+			$testPath = __DIR__ . '/img/album/' . $filename;
+			// Check if file exists in filesystem or database
+			$existsInDb = false;
+			foreach ($album as $img) {
+				if ($img['url'] === $filename) {
+					$existsInDb = true;
+					break;
+				}
+			}
+			if (!file_exists($testPath) && !$existsInDb) {
+				break;
+			}
+		}
+		if ($i >= $imageIndex + $maxAttempts - 1) {
+			throw new Exception('Não foi possível gerar nome único para a imagem');
+		}
+		
+		// Ensure directory exists with proper permissions
+		$uploadDir = __DIR__ . '/img/album/';
+		if (!is_dir($uploadDir)) {
+			if (!mkdir($uploadDir, 0777, true)) {
+				throw new Exception('Não foi possível criar diretório de upload');
+			}
+		}
+		
+		// Make sure directory is writable
+		if (!is_writable($uploadDir)) {
+			throw new Exception('Diretório de upload sem permissão de escrita');
+		}
+		
+		$uploadPath = $uploadDir . $filename;
+		
+		// Check if temp file exists and is readable
+		if (!is_uploaded_file($_FILES['file']['tmp_name'])) {
+			throw new Exception('Arquivo temporário inválido');
+		}
+		
+		// Log file info before move
+		error_log("Attempting to move file:");
+		error_log("  From: " . $_FILES['file']['tmp_name']);
+		error_log("  To: " . $uploadPath);
+		error_log("  Temp file exists: " . (file_exists($_FILES['file']['tmp_name']) ? 'yes' : 'no'));
+		error_log("  Temp file size: " . (file_exists($_FILES['file']['tmp_name']) ? filesize($_FILES['file']['tmp_name']) : 'N/A'));
 		
 		// Move arquivo enviado
 		if (move_uploaded_file($_FILES['file']['tmp_name'], $uploadPath)) {
@@ -41,7 +129,12 @@ if (isset($_FILES['file']) && isset($_POST['id_diario_obra'])) {
 				'filename' => $filename
 			];
 		} else {
-			throw new Exception('Falha ao mover arquivo enviado');
+			// More detailed error message
+			$error = error_get_last();
+			error_log("move_uploaded_file failed:");
+			error_log("  PHP Error: " . print_r($error, true));
+			error_log("  Upload error code: " . $_FILES['file']['error']);
+			throw new Exception('Falha ao mover arquivo enviado. Erro: ' . ($error ? $error['message'] : 'Desconhecido') . ' - Caminho: ' . $uploadPath);
 		}
 
 		// Resposta para Dropzone
@@ -341,6 +434,50 @@ function downloadFile($localFile)
             }
             .dropzone .dz-preview .dz-remove {
                 margin-top: -5px;
+                position: relative;
+                z-index: 1000;
+                display: inline-block;
+            }
+            .dropzone .dz-preview .dz-details {
+                display: none !important; /* Hide default file details since we have tooltip */
+            }
+            /* Hover tooltip for image info */
+            .dropzone .dz-preview {
+                position: relative;
+            }
+            .dropzone .dz-preview .dz-image-info-tooltip {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: rgba(0, 0, 0, 0.9);
+                color: white;
+                padding: 8px 12px;
+                border-radius: 4px;
+                font-size: 12px;
+                white-space: nowrap;
+                pointer-events: none;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+                z-index: 2000;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            }
+            .dropzone .dz-preview:hover .dz-image-info-tooltip {
+                opacity: 1;
+            }
+            .dropzone .dz-preview .dz-image {
+                position: relative;
+            }
+            .dropzone .dz-preview:hover .dz-image::after {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.3);
+                border-radius: 5px;
+                pointer-events: none;
             }
         </style>
         <script>
@@ -965,6 +1102,13 @@ function downloadFile($localFile)
                     class="btn btn-primary float-right mb-5">
                     Gerar Relatório
                 </button>
+                
+                <button type="button" 
+                    id="btnSalvarFotos" 
+                    class="btn btn-success float-right mb-5 mr-2"
+                    style="cursor: pointer; z-index: 1000; position: relative;">
+                    <i class="fas fa-save"></i> SALVAR
+                </button>
 
                 <?php if (!empty($album)) { ?>
                     <div class="dropdown clearfix float-right mb-5 py-0">
@@ -1032,7 +1176,7 @@ function downloadFile($localFile)
         uploadMultiple: false, // Upload individual para melhor controle
         parallelUploads: 3, // Reduzido para evitar sobrecarga
         timeout: 60000, // 60 segundos timeout
-        autoProcessQueue: true, // Upload imediato ao adicionar arquivo
+        autoProcessQueue: false, // Desabilitado - upload manual via botão SALVAR
         thumbnailWidth: 100,
         thumbnailHeight: 100,
         acceptedFiles: '.jpeg,.jpg,.png,.webp', // Adicionado WebP
@@ -1062,6 +1206,13 @@ function downloadFile($localFile)
                 if (response.success) {
                     file.serverId = response.image_id;
                     file.filename = response.filename;
+                    
+                    // Remove o arquivo do Dropzone após upload bem-sucedido
+                    setTimeout(() => {
+                        // Marca como não deletar do servidor
+                        file.skipServerDelete = true;
+                        dz.removeFile(file);
+                    }, 1500); // Aguarda 1.5 segundos para mostrar o sucesso
                 }
             });
             
@@ -1073,9 +1224,52 @@ function downloadFile($localFile)
                 }
             });
             
+            // Add file info tooltip on file added
+            dz.on("addedfile", function(file) {
+                // Habilita o botão SALVAR quando houver arquivos para upload
+                const btnSalvar = document.getElementById('btnSalvarFotos');
+                // Verifica arquivos não processados (status !== 'success')
+                const needsUpload = dz.files.some(f => f.status !== 'success' && f.status !== 'error');
+                if (needsUpload && btnSalvar) {
+                    btnSalvar.disabled = false;
+                }
+                
+                // Create tooltip element
+                const tooltip = document.createElement('div');
+                tooltip.className = 'dz-image-info-tooltip';
+                
+                // Format file size
+                let fileSize = '';
+                if (file.size) {
+                    const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
+                    fileSize = sizeInMB + ' MB';
+                } else {
+                    fileSize = '~1 MB'; // Default for existing files
+                }
+                
+                // Set tooltip content
+                tooltip.innerHTML = `
+                    <div><strong>${file.name}</strong></div>
+                    <div>Tamanho: ${fileSize}</div>
+                `;
+                
+                // Add tooltip to preview element
+                file.previewElement.appendChild(tooltip);
+            });
+            
             // Remove arquivo do servidor quando removido da interface
             dz.on("removedfile", function(file) {
-                if (file.serverId) {
+                // Desabilita o botão SALVAR se não houver mais arquivos para upload
+                setTimeout(() => {
+                    const btnSalvar = document.getElementById('btnSalvarFotos');
+                    const needsUpload = dz.files.some(f => f.status !== 'success' && f.status !== 'error');
+                    if (!needsUpload && btnSalvar) {
+                        btnSalvar.disabled = true;
+                    }
+                }, 100);
+                
+                // Só exclui do servidor se não for apenas limpeza visual
+                if (file.serverId && !file.skipServerDelete) {
                     // Faz requisição AJAX para excluir a imagem do servidor
                     $.ajax({
                         url: 'coletorDados.php',
@@ -1100,22 +1294,44 @@ function downloadFile($localFile)
     // Inicializa Dropzone 6.0
     const myDropzone = new Dropzone("#dropzoneAlbum", dropzoneConfig);
     
-    // Adiciona imagens existentes do álbum ao Dropzone
-    <?php if (!empty($album)) { 
-        $relativePath = Config::get('PHOTO_STORAGE_PATH', 'img/album');
-        foreach ($album as $img) { ?>
-        // Adiciona imagem existente
-        var mockFile = { 
-            name: "<?php echo htmlspecialchars($img['url']) ?>",
-            size: 1024000, // Tamanho fictício
-            serverId: <?php echo $img['id_imagem'] ?>,
-            status: 'success'
-        };
-        myDropzone.emit("addedfile", mockFile);
-        myDropzone.emit("thumbnail", mockFile, "<?php echo htmlspecialchars($relativePath . '/' . $img['url']) ?>");
-        myDropzone.emit("complete", mockFile);
-        myDropzone.files.push(mockFile);
-    <?php }} ?>
+    // Botão SALVAR FOTOS - processa upload manual
+    const btnSalvarFotos = document.getElementById('btnSalvarFotos');
+    if (btnSalvarFotos) {
+        // Inicialmente desabilitado
+        btnSalvarFotos.disabled = true;
+        
+        btnSalvarFotos.addEventListener('click', function() {
+            const btn = this;
+            const queuedFiles = myDropzone.getQueuedFiles();
+            
+            if (queuedFiles.length > 0) {
+                // Desabilita o botão durante o upload
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SALVANDO...';
+                
+                // Processa a fila de upload
+                myDropzone.processQueue();
+                
+                // Quando todos os uploads terminarem
+                myDropzone.on("queuecomplete", function() {
+                    // Restaura o texto do botão
+                    btn.innerHTML = '<i class="fas fa-save"></i> SALVAR';
+                    
+                    // Verifica se ainda há arquivos na fila
+                    const remainingFiles = myDropzone.getQueuedFiles();
+                    if (remainingFiles.length === 0) {
+                        btn.disabled = true;
+                    } else {
+                        btn.disabled = false;
+                    }
+                });
+            }
+        });
+    }
+    
+    // Não adiciona mais imagens existentes ao Dropzone
+    // O Dropzone agora é usado apenas para novas imagens
+    // As imagens já salvas aparecem apenas na galeria abaixo
     
     // Sistema de contagem dinâmica e miniaturas
     let photoCount = <?php echo count($album); ?>;
@@ -1148,7 +1364,20 @@ function downloadFile($localFile)
     }
     
     function createAlbumDropdown() {
-        const container = document.querySelector('input[value="Gerar Relatório"]').parentNode;
+        // Find the submit button more safely
+        const submitBtn = document.getElementById('submit');
+        if (!submitBtn || !submitBtn.parentNode) {
+            console.error('Submit button not found');
+            return;
+        }
+        
+        const container = submitBtn.parentNode;
+        
+        // Check if dropdown already exists to avoid duplicates
+        if (document.querySelector('.dropdown.clearfix.float-right')) {
+            return;
+        }
+        
         const dropdownHtml = `
             <div class="dropdown clearfix float-right mb-5 py-0">
                 <button class="btn btn-outline-secondary dropdown-toggle float-right mr-5 mb-5" type="button" id="dropdownMenuButton" data-toggle="dropdown">

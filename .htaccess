@@ -1,18 +1,17 @@
-# Configurações de Upload
+# Configurações PHP para upload de arquivos
 php_value upload_max_filesize 10M
-php_value post_max_size 50M
+php_value post_max_size 100M
 php_value max_file_uploads 20
+php_value memory_limit 256M
 php_value max_execution_time 300
 php_value max_input_time 300
-php_value memory_limit 256M
 
-<IfModule mod_headers.c>
-Header set Cache-Control "private"
-</IfModule>
+# Segurança
+Options -Indexes
+DirectoryIndex index.php
 
-<IfModule mod_rewrite.c>
-	RewriteEngine on
-	RewriteCond %{REQUEST_FILENAME} !-f
-	RewriteCond %{REQUEST_FILENAME} !-d
-	RewriteRule ^(.*)$ index.php/$1 [L]
-</IfModule>
+# Proteção de arquivos sensíveis
+<FilesMatch "\.(env|ini|log|sql)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>

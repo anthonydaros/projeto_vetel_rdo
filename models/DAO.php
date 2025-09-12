@@ -1096,7 +1096,7 @@ class DAO
 		$stmt->bindValue(':id_imagem', $idImagem);
 		$stmt->execute();
 
-		return $stmt->fetch(PDO::FETCH_ASSOC);
+		return $stmt->fetch(\PDO::FETCH_ASSOC);
 	}
 
 	public function deleteImagemPorId($idImagem)
