@@ -11,10 +11,8 @@ COPY composer.json composer.lock* ./
 RUN composer install \
     --no-dev \
     --no-scripts \
-    --no-autoloader \
     --prefer-dist \
-    --no-interaction \
-    --optimize-autoloader
+    --no-interaction
 
 # Copy application files
 COPY . .
