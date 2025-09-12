@@ -164,9 +164,9 @@ COPY --from=composer-build /app/composer.lock* ./composer.lock
 # Copy application code
 COPY . .
 
-# Copy and set entrypoint script
-COPY docker-entrypoint.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+# Move entrypoint script to proper location and set permissions
+RUN mv /var/www/html/docker-entrypoint.sh /usr/local/bin/ \
+    && chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Set proper permissions for Apache and uploads
 RUN chown -R www-data:www-data /var/www/html \
