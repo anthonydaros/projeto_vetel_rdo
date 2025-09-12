@@ -69,9 +69,15 @@ if (isset($_GET['id_obra'])) {
 	}
 
 	if (!$dao->buscaDiarioObraPorIdObraDataNumero($diarioObra)) {
-		$ret = $dao->insereDiarioObra($diarioObra);
-
-		header("Location: cadastroDiarioObras.php?id_obra={$diarioObra->fk_id_obra}");
+		$newDiarioId = $dao->insereDiarioObra($diarioObra);
+		
+		// Redirect to the newly created diary page
+		if ($newDiarioId) {
+			header("Location: coletorDados.php?id_diario_obra={$newDiarioId}");
+		} else {
+			// Fallback to the listing page if ID retrieval fails
+			header("Location: cadastroDiarioObras.php?id_obra={$diarioObra->fk_id_obra}");
+		}
 	} else {
 		header("Location: cadastroDiarioObras.php?id_obra={$diarioObra->fk_id_obra}&sucesso=0");
 	}
@@ -93,20 +99,55 @@ if (isset($_GET['id_obra'])) {
 		exit;
 	}
 
-	$album = $dao->buscaAlbumDiario($diarioObra->id_diario_obra);
+	// Get the obra ID for redirect before deletion
+	$obraId = $diarioExists->fk_id_obra ?? 0;
 
-	foreach ($album as $foto) {
-		if (file_exists($foto['url'])) {
-			unlink($foto['url']);
+	try {
+		// 1. First, get all images from database
+		$album = $dao->buscaAlbumDiario($diarioObra->id_diario_obra);
+		error_log("Deleting diario_obra ID: $id with " . count($album) . " images");
+
+		// 2. Delete physical image files
+		$deletedFiles = 0;
+		$failedFiles = 0;
+		foreach ($album as $foto) {
+			// Build complete path to image file
+			$imagePath = __DIR__ . '/img/album/' . $foto['url'];
+			
+			if (file_exists($imagePath)) {
+				if (unlink($imagePath)) {
+					$deletedFiles++;
+					error_log("Deleted image file: " . $foto['url']);
+				} else {
+					$failedFiles++;
+					error_log("Failed to delete image file: " . $foto['url']);
+				}
+			} else {
+				error_log("Image file not found: " . $imagePath);
+			}
 		}
+		
+		error_log("Physical files deletion: $deletedFiles deleted, $failedFiles failed");
+
+		// 3. Delete diario_obra record (CASCADE will handle related records)
+		// The database cascade constraints will automatically delete:
+		// - imagem records (via fk_imagem_diario_obra)
+		// - servico records (via fk_servico_diario_obra)  
+		// - funcionario_diario_obra records (via fk_funcionario_diario_obra_diario_obra)
+		$removido = $dao->deleteDiarioObra($diarioObra);
+		
+		if ($removido) {
+			error_log("Successfully deleted diario_obra ID: $id and all related records via CASCADE");
+		} else {
+			error_log("Failed to delete diario_obra ID: $id from database");
+		}
+
+	} catch (Exception $e) {
+		error_log("Error during deletion of diario_obra ID $id: " . $e->getMessage());
+		// Continue with redirect even if there was an error
 	}
 
-	$ret = $dao->deleteAlbum($diarioObra->id_diario_obra);
-
-	$removido = $dao->deleteDiarioObra($diarioObra);
-
-	// Get the obra ID to redirect properly
-	$obraId = $diarioExists->fk_id_obra ?? 0;
+	// Redirect back to the obra page
 	if ($obraId > 0) {
 		header("Location: cadastroDiarioObras.php?id_obra=$obraId");
 	} else {
@@ -184,7 +225,7 @@ if (isset($_GET['id_obra'])) {
                             name="data"
                             style="width: 160px"
                             class="form-control pl-2" 
-                            value="<?php echo htmlspecialchars($diarioObra->data->format('Y-m-d')) ?>" 
+                            value="<?php echo htmlspecialchars(is_string($diarioObra->data) ? $diarioObra->data : $diarioObra->data->format('Y-m-d')) ?>" 
                             id="data">
                     </div>
                     <div class="form-group w-25">

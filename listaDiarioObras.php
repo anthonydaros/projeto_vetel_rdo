@@ -56,14 +56,12 @@
                                     <script>
                                         $(() => {
                                             $(`#remover-<?php echo htmlspecialchars($diarioObra['id_diario_obra']) ?>`).on('click', function() {
-                                                if (confirm('Deseja realmente excluir o RDO Nº <?php echo htmlspecialchars($diarioObra['numero_diario']) ?>?'))
-                                                {
-                                                    $.get(`<?php echo htmlspecialchars($_SERVER['PHP_SELF']) ?>?remover=<?php echo htmlspecialchars($diarioObra['id_diario_obra']) ?>`, function(data, status) {
-                                                        // var newURL = location.href.split("?")[0];
-                                                        // window.history.pushState('object', document.title, newURL);
-                                                        location.reload(true)       
-                                                    })
-                                                }
+                                                // Preenche os dados no modal
+                                                $('#deleteRdoNumber').text('<?php echo htmlspecialchars($diarioObra['numero_diario']) ?>');
+                                                $('#deleteRdoDate').text('<?php echo htmlspecialchars((new DateTime($diarioObra['data']))->format('d/m/Y')) ?>');
+                                                $('#confirmDeleteBtn').data('diario-id', '<?php echo htmlspecialchars($diarioObra['id_diario_obra']) ?>');
+                                                // Mostra o modal
+                                                $('#deleteConfirmModal').modal('show');
                                             });
                                         });
                                     </script>
@@ -79,6 +77,84 @@
             <?php } ?>
             </br></br></br>
         </div>
+
+        <!-- Modal de Confirmação de Exclusão -->
+        <div class="modal fade" id="deleteConfirmModal" tabindex="-1" role="dialog" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+                <div class="modal-content">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title" id="deleteConfirmModalLabel">
+                            <i class="fa fa-exclamation-triangle mr-2"></i>
+                            Confirmar Exclusão
+                        </h5>
+                        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="text-center mb-3">
+                            <i class="fa fa-trash-o text-danger" style="font-size: 48px;"></i>
+                        </div>
+                        <p class="text-center">
+                            Você está prestes a excluir o <strong>RDO Nº <span id="deleteRdoNumber"></span></strong>
+                        </p>
+                        <p class="text-center text-muted">
+                            Data: <span id="deleteRdoDate"></span>
+                        </p>
+                        <div class="alert alert-warning" role="alert">
+                            <i class="fa fa-warning mr-2"></i>
+                            <strong>Atenção!</strong> Esta ação irá remover permanentemente:
+                            <ul class="mt-2 mb-0">
+                                <li>O relatório diário de obra</li>
+                                <li>Todas as fotos anexadas</li>
+                                <li>Registros de funcionários do dia</li>
+                                <li>Serviços executados</li>
+                            </ul>
+                        </div>
+                        <p class="text-center text-danger font-weight-bold">
+                            Esta ação não pode ser desfeita!
+                        </p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                            <i class="fa fa-times mr-2"></i>Cancelar
+                        </button>
+                        <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+                            <i class="fa fa-trash mr-2"></i>Excluir RDO
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            $(document).ready(function() {
+                // Handler para o botão de confirmação de exclusão
+                $('#confirmDeleteBtn').on('click', function() {
+                    var diarioId = $(this).data('diario-id');
+                    
+                    // Desabilita o botão e mostra loading
+                    $(this).prop('disabled', true).html('<i class="fa fa-spinner fa-spin mr-2"></i>Excluindo...');
+                    
+                    // Faz a requisição de exclusão
+                    $.get(`<?php echo htmlspecialchars($_SERVER['PHP_SELF']) ?>?remover=${diarioId}`, function(data, status) {
+                        // Fecha o modal
+                        $('#deleteConfirmModal').modal('hide');
+                        // Recarrega a página
+                        location.reload(true);
+                    }).fail(function() {
+                        // Em caso de erro
+                        alert('Erro ao excluir o RDO. Por favor, tente novamente.');
+                        $('#confirmDeleteBtn').prop('disabled', false).html('<i class="fa fa-trash mr-2"></i>Excluir RDO');
+                    });
+                });
+                
+                // Reset do botão quando o modal é fechado
+                $('#deleteConfirmModal').on('hidden.bs.modal', function () {
+                    $('#confirmDeleteBtn').prop('disabled', false).html('<i class="fa fa-trash mr-2"></i>Excluir RDO');
+                });
+            });
+        </script>
 
     </body>
 </html>

@@ -165,6 +165,47 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'get_photos' && isset($_GET['id_di
 	exit;
 }
 
+// Endpoint para salvar observações gerais
+if (isset($_POST['action']) && $_POST['action'] === 'save_observations' && isset($_POST['id_diario_obra'])) {
+	header('Content-Type: application/json');
+	try {
+		$idDiarioObra = (int) $_POST['id_diario_obra'];
+		$obsGerais = $_POST['obs_gerais'] ?? '';
+		
+		// Inicializa DAO
+		$pdo = Connection::getPDO();
+		$dao = new DAO($pdo);
+		
+		// Busca o registro completo
+		$diarioObra = $dao->buscaDiarioObraPorId($idDiarioObra);
+		
+		if (!$diarioObra) {
+			throw new Exception('Diário de obra não encontrado');
+		}
+		
+		// Atualiza apenas o campo obs_gerais
+		$diarioObra->obs_gerais = $obsGerais;
+		
+		// Salva no banco
+		$result = $dao->updateDiarioObra($diarioObra);
+		
+		if ($result) {
+			echo json_encode([
+				'success' => true,
+				'message' => 'Observações salvas com sucesso'
+			]);
+		} else {
+			throw new Exception('Erro ao salvar observações');
+		}
+	} catch (Exception $e) {
+		echo json_encode([
+			'success' => false,
+			'error' => $e->getMessage()
+		]);
+	}
+	exit;
+}
+
 // Endpoint para excluir imagem individual
 if (isset($_POST['action']) && $_POST['action'] === 'delete_image' && isset($_POST['image_id'])) {
 	header('Content-Type: application/json');
@@ -1084,7 +1125,7 @@ function downloadFile($localFile)
                 <!-- OBS. GERAIS -->
                 <div class="form-group mx-auto d-block mt-3 mb-5">
                     <label for="obsGerais" class="mb-3 font-weight-bolder">Observações Gerais:</label>
-                    <textarea name="obsGeral" class="form-control" id="obsGerais" rows="3">Tempo bom.</textarea>
+                    <textarea name="obsGeral" class="form-control" id="obsGerais" rows="3"><?php echo isset($diarioObra->obs_gerais) ? htmlspecialchars($diarioObra->obs_gerais) : ''; ?></textarea>
                 </div>
 
                 <!-- ALBUM -->
@@ -1300,31 +1341,78 @@ function downloadFile($localFile)
         // Inicialmente desabilitado
         btnSalvarFotos.disabled = true;
         
-        btnSalvarFotos.addEventListener('click', function() {
+        btnSalvarFotos.addEventListener('click', async function() {
             const btn = this;
             const queuedFiles = myDropzone.getQueuedFiles();
+            const obsGerais = document.getElementById('obsGerais').value;
+            const idDiarioObra = <?php echo $diarioObra->id_diario_obra; ?>;
             
+            // Desabilita o botão durante o salvamento
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SALVANDO...';
+            
+            // Array de promessas para executar em paralelo
+            const promises = [];
+            
+            // Promessa 1: Salvar observações gerais
+            const saveObservations = $.ajax({
+                url: 'coletorDados.php',
+                type: 'POST',
+                data: {
+                    action: 'save_observations',
+                    id_diario_obra: idDiarioObra,
+                    obs_gerais: obsGerais
+                }
+            }).done(function(response) {
+                console.log('Observações salvas:', response);
+            }).fail(function(xhr, status, error) {
+                console.error('Erro ao salvar observações:', error);
+            });
+            
+            promises.push(saveObservations);
+            
+            // Promessa 2: Upload de fotos (se houver)
             if (queuedFiles.length > 0) {
-                // Desabilita o botão durante o upload
-                btn.disabled = true;
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SALVANDO...';
-                
-                // Processa a fila de upload
-                myDropzone.processQueue();
-                
-                // Quando todos os uploads terminarem
-                myDropzone.on("queuecomplete", function() {
-                    // Restaura o texto do botão
-                    btn.innerHTML = '<i class="fas fa-save"></i> SALVAR';
+                const photoUpload = new Promise((resolve) => {
+                    // Remove listener anterior para evitar duplicação
+                    myDropzone.off("queuecomplete");
                     
-                    // Verifica se ainda há arquivos na fila
-                    const remainingFiles = myDropzone.getQueuedFiles();
-                    if (remainingFiles.length === 0) {
-                        btn.disabled = true;
-                    } else {
-                        btn.disabled = false;
-                    }
+                    myDropzone.on("queuecomplete", function() {
+                        resolve();
+                    });
+                    
+                    // Processa a fila de upload
+                    myDropzone.processQueue();
                 });
+                
+                promises.push(photoUpload);
+            }
+            
+            // Aguarda todas as operações terminarem
+            try {
+                await Promise.all(promises);
+                
+                // Sucesso - restaura o botão
+                btn.innerHTML = '<i class="fas fa-save"></i> SALVAR';
+                
+                // Desabilita se não houver mais mudanças
+                const hasQueuedFiles = myDropzone.getQueuedFiles().length > 0;
+                const hasTextChanges = obsGerais !== (window.originalObsGerais || '');
+                
+                btn.disabled = !hasQueuedFiles && !hasTextChanges;
+                
+                // Atualiza o valor original
+                window.originalObsGerais = obsGerais;
+                
+                // Mostra mensagem de sucesso
+                if (typeof showSuccessMessage === 'function') {
+                    showSuccessMessage('Dados salvos com sucesso!');
+                }
+            } catch (error) {
+                console.error('Erro ao salvar:', error);
+                btn.innerHTML = '<i class="fas fa-save"></i> SALVAR';
+                btn.disabled = false;
+                alert('Erro ao salvar. Por favor, tente novamente.');
             }
         });
     }
@@ -1332,6 +1420,44 @@ function downloadFile($localFile)
     // Não adiciona mais imagens existentes ao Dropzone
     // O Dropzone agora é usado apenas para novas imagens
     // As imagens já salvas aparecem apenas na galeria abaixo
+    
+    // Armazena o valor original das observações
+    window.originalObsGerais = document.getElementById('obsGerais').value;
+    
+    // Detecta mudanças no textarea de observações
+    const obsGeraisTextarea = document.getElementById('obsGerais');
+    if (obsGeraisTextarea) {
+        obsGeraisTextarea.addEventListener('input', function() {
+            const hasTextChanges = this.value !== window.originalObsGerais;
+            const hasQueuedFiles = myDropzone.getQueuedFiles().length > 0;
+            
+            // Habilita o botão se houver mudanças
+            if (btnSalvarFotos) {
+                btnSalvarFotos.disabled = !hasTextChanges && !hasQueuedFiles;
+            }
+        });
+        
+        // Também detecta mudanças ao colar ou cortar texto
+        obsGeraisTextarea.addEventListener('paste', function() {
+            setTimeout(() => {
+                const hasTextChanges = this.value !== window.originalObsGerais;
+                const hasQueuedFiles = myDropzone.getQueuedFiles().length > 0;
+                if (btnSalvarFotos) {
+                    btnSalvarFotos.disabled = !hasTextChanges && !hasQueuedFiles;
+                }
+            }, 10);
+        });
+        
+        obsGeraisTextarea.addEventListener('cut', function() {
+            setTimeout(() => {
+                const hasTextChanges = this.value !== window.originalObsGerais;
+                const hasQueuedFiles = myDropzone.getQueuedFiles().length > 0;
+                if (btnSalvarFotos) {
+                    btnSalvarFotos.disabled = !hasTextChanges && !hasQueuedFiles;
+                }
+            }, 10);
+        });
+    }
     
     // Sistema de contagem dinâmica e miniaturas
     let photoCount = <?php echo count($album); ?>;
