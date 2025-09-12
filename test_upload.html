@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Teste Upload Imediato</title>
+</head>
+<body>
+    <h2>Teste de Upload e Exclusão Imediata</h2>
+    
+    <h3>Funcionalidades Implementadas:</h3>
+    <ul>
+        <li>✅ Upload imediato ao arrastar arquivo (autoProcessQueue: true)</li>
+        <li>✅ Exclusão imediata ao remover arquivo do Dropzone</li>
+        <li>✅ Exibição de imagens existentes do álbum no Dropzone</li>
+        <li>✅ Simplificação do botão "Gerar Relatório" (não aguarda mais uploads)</li>
+    </ul>
+    
+    <h3>Como Testar:</h3>
+    <ol>
+        <li>Acesse: <a href="http://localhost:8000/coletorDados.php?id_diario_obra=1" target="_blank">http://localhost:8000/coletorDados.php?id_diario_obra=1</a></li>
+        <li>Arraste uma imagem para o Dropzone - ela será enviada imediatamente</li>
+        <li>Clique no X em uma imagem - ela será removida imediatamente do servidor</li>
+        <li>O botão "Gerar Relatório" agora apenas gera o PDF sem aguardar uploads</li>
+    </ol>
+    
+    <h3>Verificação no Console:</h3>
+    <p>Abra o console do navegador (F12) para ver as mensagens:</p>
+    <ul>
+        <li>"Upload sucesso:" quando imagem é enviada</li>
+        <li>"Imagem excluída com sucesso:" quando imagem é removida</li>
+    </ul>
+    
+    <h3>Mudanças Implementadas:</h3>
+    <pre>
+1. coletorDados.php:
+   - autoProcessQueue: true (linha 1001)
+   - Endpoint de exclusão (linhas 45-82)
+   - removedfile com AJAX para deletar (linhas 1045-1061)
+   - Exibição de imagens existentes no Dropzone (linhas 1069-1084)
+   - Simplificação do botão submit (linha 1273)
+
+2. models/DAO.php:
+   - buscaImagemPorId() (linha 1082)
+   - deleteImagemPorId() (linha 1097)
+    </pre>
+</body>
+</html>
+</content>
+</invoke>

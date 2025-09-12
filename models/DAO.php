@@ -1078,4 +1078,41 @@ class DAO
 
 		return $ret;
 	}
+
+	public function buscaImagemPorId($idImagem)
+	{
+		$sql = '
+				select
+					`id_imagem`,
+					`fk_id_diario_obra`,
+					`url`
+				from
+					`imagem`
+				where
+					`id_imagem` = :id_imagem;
+				';
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->bindValue(':id_imagem', $idImagem);
+		$stmt->execute();
+
+		return $stmt->fetch(PDO::FETCH_ASSOC);
+	}
+
+	public function deleteImagemPorId($idImagem)
+	{
+		$sql = '
+				delete
+				from
+					`imagem`
+				where
+					`id_imagem` = :id_imagem;
+				';
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->bindValue(':id_imagem', $idImagem);
+		$ret = $stmt->execute();
+
+		return $ret;
+	}
 }

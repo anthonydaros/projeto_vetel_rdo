@@ -1,18 +1,48 @@
 <?php
-require_once __DIR__ . '/bootstrap.php'; // Nova arquitetura
+// require_once __DIR__ . '/bootstrap.php'; // Nova arquitetura - temporariamente desabilitado
+require_once __DIR__ . '/startup.php'; // Includes e DAO
 require_once __DIR__ . '/ftpFunctions.php';
 
 use Src\Exception\ServiceException;
 use Config\Config;
+use Models\Connection;
+use Models\DAO;
+use Models\Imagem;
 
 // Nova lógica de upload de imagens
 if (isset($_FILES['file']) && isset($_POST['id_diario_obra'])) {
+	error_reporting(E_ALL);
+	ini_set('display_errors', 1);
 	try {
-		$imageUploadService = app('image.upload');
 		$diarioId = (int) $_POST['id_diario_obra'];
-
-		// Processo de upload usando nova arquitetura
-		$result = $imageUploadService->uploadImageForDiario($_FILES['file'], $diarioId);
+		
+		// Usa DAO diretamente por enquanto
+		$pdo = Connection::getPDO();
+		$dao = new DAO($pdo);
+		$album = $dao->buscaAlbumDiario($diarioId);
+		$imageIndex = count($album);
+		$filename = "diario-{$diarioId}-foto-{$imageIndex}.jpg";
+		$uploadPath = __DIR__ . '/img/album/' . $filename;
+		
+		// Move arquivo enviado
+		if (move_uploaded_file($_FILES['file']['tmp_name'], $uploadPath)) {
+			// Insere no banco
+			$imagem = new Imagem();
+			$imagem->fk_id_diario_obra = $diarioId;
+			$imagem->url = $filename;
+			$dao->insereImagem($imagem);
+			
+			// Busca ID da imagem inserida
+			$album = $dao->buscaAlbumDiario($diarioId);
+			$lastImage = end($album);
+			
+			$result = [
+				'image_id' => $lastImage['id_imagem'],
+				'filename' => $filename
+			];
+		} else {
+			throw new Exception('Falha ao mover arquivo enviado');
+		}
 
 		// Resposta para Dropzone
 		header('Content-Type: application/json');
@@ -39,6 +69,48 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'get_photos' && isset($_GET['id_di
 	header('Content-Type: application/json');
 	$photos = $dao->buscaAlbumDiario($_GET['id_diario_obra']);
 	echo json_encode($photos);
+	exit;
+}
+
+// Endpoint para excluir imagem individual
+if (isset($_POST['action']) && $_POST['action'] === 'delete_image' && isset($_POST['image_id'])) {
+	header('Content-Type: application/json');
+	try {
+		$imageId = (int) $_POST['image_id'];
+		
+		// Inicializa DAO
+		$pdo = Connection::getPDO();
+		$dao = new DAO($pdo);
+		
+		// Busca informações da imagem antes de deletar
+		$imageInfo = $dao->buscaImagemPorId($imageId);
+		
+		if ($imageInfo) {
+			// Remove arquivo físico
+			$imagePath = __DIR__ . '/img/album/' . $imageInfo['url'];
+			if (file_exists($imagePath)) {
+				unlink($imagePath);
+			}
+			
+			// Remove do banco de dados
+			$dao->deleteImagemPorId($imageId);
+			
+			echo json_encode([
+				'success' => true,
+				'message' => 'Imagem excluída com sucesso'
+			]);
+		} else {
+			echo json_encode([
+				'success' => false,
+				'error' => 'Imagem não encontrada'
+			]);
+		}
+	} catch (Exception $e) {
+		echo json_encode([
+			'success' => false,
+			'error' => 'Erro ao excluir imagem: ' . $e->getMessage()
+		]);
+	}
 	exit;
 }
 
@@ -960,7 +1032,7 @@ function downloadFile($localFile)
         uploadMultiple: false, // Upload individual para melhor controle
         parallelUploads: 3, // Reduzido para evitar sobrecarga
         timeout: 60000, // 60 segundos timeout
-        autoProcessQueue: false,
+        autoProcessQueue: true, // Upload imediato ao adicionar arquivo
         thumbnailWidth: 100,
         thumbnailHeight: 100,
         acceptedFiles: '.jpeg,.jpg,.png,.webp', // Adicionado WebP
@@ -1004,8 +1076,22 @@ function downloadFile($localFile)
             // Remove arquivo do servidor quando removido da interface
             dz.on("removedfile", function(file) {
                 if (file.serverId) {
-                    // TODO: Implementar endpoint de remoção individual
-                    console.log("Removendo arquivo:", file.serverId);
+                    // Faz requisição AJAX para excluir a imagem do servidor
+                    $.ajax({
+                        url: 'coletorDados.php',
+                        type: 'POST',
+                        data: {
+                            action: 'delete_image',
+                            image_id: file.serverId
+                        },
+                        success: function(response) {
+                            console.log('Imagem excluída com sucesso:', file.serverId);
+                        },
+                        error: function(xhr, status, error) {
+                            console.error('Erro ao excluir imagem:', error);
+                            alert('Erro ao excluir imagem. Por favor, tente novamente.');
+                        }
+                    });
                 }
             });
         }
@@ -1013,6 +1099,23 @@ function downloadFile($localFile)
 
     // Inicializa Dropzone 6.0
     const myDropzone = new Dropzone("#dropzoneAlbum", dropzoneConfig);
+    
+    // Adiciona imagens existentes do álbum ao Dropzone
+    <?php if (!empty($album)) { 
+        $relativePath = Config::get('PHOTO_STORAGE_PATH', 'img/album');
+        foreach ($album as $img) { ?>
+        // Adiciona imagem existente
+        var mockFile = { 
+            name: "<?php echo htmlspecialchars($img['url']) ?>",
+            size: 1024000, // Tamanho fictício
+            serverId: <?php echo $img['id_imagem'] ?>,
+            status: 'success'
+        };
+        myDropzone.emit("addedfile", mockFile);
+        myDropzone.emit("thumbnail", mockFile, "<?php echo htmlspecialchars($relativePath . '/' . $img['url']) ?>");
+        myDropzone.emit("complete", mockFile);
+        myDropzone.files.push(mockFile);
+    <?php }} ?>
     
     // Sistema de contagem dinâmica e miniaturas
     let photoCount = <?php echo count($album); ?>;
@@ -1217,91 +1320,12 @@ function downloadFile($localFile)
     // Flag to track if we're submitting the form
     let isSubmittingForm = false;
     
-    // Botão de submit atualizado com modal loader
+    // Botão de submit simplificado - uploads já são feitos imediatamente
     $('#submit').on('click', function(e) {
         // Set flag to indicate we're submitting
         isSubmittingForm = true;
         
-        // Check if Dropzone exists
-        if (typeof myDropzone !== 'undefined') {
-            const filesAccepted = myDropzone.getAcceptedFiles().length;
-            const filesQueued = myDropzone.getQueuedFiles().length;
-            
-            if (filesQueued > 0) {
-                e.preventDefault();
-                $('#existeAlbum').val(1);
-                
-                // Show loading modal
-                $('#pdfLoadingModal').modal('show');
-                $('#loadingStatus').text('Fazendo upload das imagens...');
-                
-                // Processa fila de upload
-                myDropzone.processQueue();
-                
-                // Aguarda conclusão dos uploads antes de submeter o form
-                myDropzone.on("queuecomplete", function() {
-                    $('#loadingStatus').text('Preparando geração do PDF...');
-                    $('#loadingProgress').css('width', '90%');
-                    
-                    // Preload images before submitting
-                    preloadImages().then(() => {
-                        console.log('Dropzone images preloaded, submitting form...');
-                        $('#loadingStatus').text('Gerando PDF...');
-                        $('#loadingProgress').css('width', '100%');
-                        
-                        setTimeout(() => {
-                            // Create a hidden input for PDF generation flag
-                            if (!$('#form input[name="pdf_submit"]').length) {
-                            $('<input>').attr({
-                            type: 'hidden',
-                            name: 'pdf_submit',
-                            value: '1'
-                            }).appendTo('#form');
-                            }
-                            
-                            // Submit the form using POST
-                            const form = document.getElementById('form');
-                            if (form) {
-                                // Remove any jQuery event handlers
-                                $(form).off('submit');
-                                // Ensure POST method
-                                form.method = 'POST';
-                                // Use HTMLFormElement.prototype.submit to bypass any override
-                                HTMLFormElement.prototype.submit.call(form);
-                            } else {
-                                console.error('Form not found!');
-                            }
-                        }, 200);
-                    }).catch(error => {
-                        console.error('Error preloading images:', error);
-                        // Create a hidden input for PDF generation flag
-                        if (!$('#form input[name="pdf_submit"]').length) {
-                            $('<input>').attr({
-                                type: 'hidden',
-                                name: 'pdf_submit',
-                                value: '1'
-                            }).appendTo('#form');
-                        }
-                        
-                        // Submit the form using POST
-                        const form = document.getElementById('form');
-                        if (form) {
-                            // Remove any jQuery event handlers
-                            $(form).off('submit');
-                            // Ensure POST method
-                            form.method = 'POST';
-                            // Use HTMLFormElement.prototype.submit to bypass any override
-                            HTMLFormElement.prototype.submit.call(form);
-                        } else {
-                            console.error('Form not found!');
-                        }
-                    });
-                });
-                return; // Exit early
-            }
-        }
-        
-        // Regular submission (no new files to upload)
+        // Como uploads são imediatos, apenas gera o PDF
         e.preventDefault();
         $('#pdfLoadingModal').modal('show');
         
