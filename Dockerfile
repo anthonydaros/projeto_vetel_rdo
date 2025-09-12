@@ -8,6 +8,8 @@ WORKDIR /app
 COPY composer.json composer.lock ./
 
 # Install dependencies with error handling
+# Using --ignore-platform-reqs in composer stage since we only need to download packages
+# The actual PHP extensions are installed in the runtime stage
 RUN composer install \
     --no-dev \
     --no-scripts \
@@ -28,7 +30,7 @@ COPY . .
 RUN composer dump-autoload --optimize --no-dev --classmap-authoritative
 
 # Stage 2: Production image
-FROM php:8.2-apache
+FROM php:8.3-apache
 
 # Install system dependencies and PHP extensions
 RUN apt-get update && apt-get install -y \
