@@ -1,0 +1,18 @@
+version: '3'
+
+services:
+  web:
+    build: .
+    environment:
+      DB_HOST: "103.199.185.165"
+      DB_PORT: "5987"
+      DB_DATABASE: "default"
+      DB_USERNAME: "mariadb"
+      DB_PASSWORD: "hr6nhoC6TWfMyAoFZbhB4TPsKoomu00U0gGov1MIsiTihJiG4KTBYXJrpzW2g1n8"
+      DB_CHARSET: "utf8"
+      APP_ENV: "production"
+      APP_DEBUG: "false"
+      TIMEZONE: "America/Sao_Paulo"
+    volumes:
+      - ./uploads:/var/www/html/img/album
+      - ./reports:/var/www/html/relatorios

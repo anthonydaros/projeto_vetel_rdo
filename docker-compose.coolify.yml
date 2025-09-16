@@ -5,77 +5,38 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: projeto-vetel:latest
     restart: unless-stopped
-    
-    # Environment variables for Coolify
+
     environment:
-      # Database Configuration (External MySQL) - REQUIRED
-      - DB_HOST=103.199.185.165
-      - DB_PORT=5987
-      - DB_DATABASE=default
-      - DB_USERNAME=mariadb
-      - DB_PASSWORD=hr6nhoC6TWfMyAoFZbhB4TPsKoomu00U0gGov1MIsiTihJiG4KTBYXJrpzW2g1n8
-      - DB_CHARSET=utf8
-      
+      # Database Configuration (External MySQL)
+      DB_HOST: "103.199.185.165"
+      DB_PORT: "5987"
+      DB_DATABASE: "default"
+      DB_USERNAME: "mariadb"
+      DB_PASSWORD: "hr6nhoC6TWfMyAoFZbhB4TPsKoomu00U0gGov1MIsiTihJiG4KTBYXJrpzW2g1n8"
+      DB_CHARSET: "utf8"
+
       # Application Settings
-      - APP_ENV=${APP_ENV:-production}
-      - APP_DEBUG=${APP_DEBUG:-false}
-      
+      APP_ENV: "production"
+      APP_DEBUG: "false"
+
       # Timezone
-      - TIMEZONE=${TIMEZONE:-America/Sao_Paulo}
-      
+      TIMEZONE: "America/Sao_Paulo"
+
       # Session Configuration
-      - SESSION_LIFETIME=${SESSION_LIFETIME:-120}
-      - SESSION_SECURE_COOKIE=${SESSION_SECURE_COOKIE:-true}
-      - SESSION_HTTP_ONLY=${SESSION_HTTP_ONLY:-true}
-      
+      SESSION_LIFETIME: "120"
+      SESSION_SECURE_COOKIE: "false"
+      SESSION_HTTP_ONLY: "true"
+
       # Photo Storage Configuration
-      - PHOTO_STORAGE_PATH=/var/www/html/img/album
-    
-    # Volume configuration with named volumes
+      PHOTO_STORAGE_PATH: "/var/www/html/img/album"
+
     volumes:
-      # Persistent storage using named volumes
-      - uploads:/var/www/html/img/album
-      - reports:/var/www/html/relatorios
-      - sessions:/var/www/sessions
-      - logs:/var/log/apache2
-    
-    # Health check
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health.php"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-    
-    # Expose port for Coolify (no port mapping needed, Coolify handles it)
+      - ./uploads:/var/www/html/img/album
+      - ./reports:/var/www/html/relatorios
+      - ./sessions:/var/www/sessions
+      - ./logs:/var/log/apache2
+
+    # Expose port 80 for Coolify
     expose:
-      - "80"
-
-    # NOTE: Do NOT use 'ports' mapping in Coolify deployments
-    # Coolify manages port allocation automatically
-    # Uncomment below only for local testing:
-    # ports:
-    #   - "8080:80"
-    
-    # Resource limits
-    deploy:
-      resources:
-        limits:
-          cpus: '2'
-          memory: 1024M
-        reservations:
-          cpus: '0.5'
-          memory: 256M
-
-# Named volumes with local driver
-volumes:
-  uploads:
-    driver: local
-  reports:
-    driver: local
-  sessions:
-    driver: local
-  logs:
-    driver: local
+      - 80
