@@ -53,9 +53,11 @@ services:
     expose:
       - "80"
 
-    # Port mapping for local testing
-    ports:
-      - "8080:80"
+    # NOTE: Do NOT use 'ports' mapping in Coolify deployments
+    # Coolify manages port allocation automatically
+    # Uncomment below only for local testing:
+    # ports:
+    #   - "8080:80"
     
     # Resource limits
     deploy:
