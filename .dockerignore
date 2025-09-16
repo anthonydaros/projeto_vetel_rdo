@@ -68,7 +68,8 @@ cache/
 *.old
 
 # Upload Directories (will be mounted as volumes)
-img/album/*
+# IMPORTANT: img/album needs to be included in build for photo backup
+# img/album/* - Commented out to include photos in Docker image
 relatorios/*
 uploads/*
 storage/*
