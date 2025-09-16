@@ -32,7 +32,11 @@ if [ ! -d "$PHOTO_DIR" ]; then
 fi
 
 # Always sync photos from backup to volume
-if [ -d "$PHOTO_BACKUP" ]; then
+echo "Checking photo backup directory: $PHOTO_BACKUP"
+BACKUP_COUNT=$(find "$PHOTO_BACKUP" -type f \( -name "*.jpg" -o -name "*.jpeg" -o -name "*.png" -o -name "*.webp" \) 2>/dev/null | wc -l)
+echo "Photos available in backup: $BACKUP_COUNT"
+
+if [ -d "$PHOTO_BACKUP" ] && [ "$BACKUP_COUNT" -gt 0 ]; then
     echo "Syncing photos from backup to volume..."
 
     # Count files before sync
@@ -43,11 +47,11 @@ if [ -d "$PHOTO_BACKUP" ]; then
     if [ "$BEFORE_COUNT" -lt 100 ]; then
         echo "Volume appears incomplete (only $BEFORE_COUNT photos), performing full sync..."
         # Force copy ALL files from backup
-        cp -Rfv "$PHOTO_BACKUP/"* "$PHOTO_DIR/" 2>/dev/null || true
+        cp -Rf "$PHOTO_BACKUP/"* "$PHOTO_DIR/" 2>/dev/null || true
     else
         echo "Volume has sufficient photos, performing incremental sync..."
         # Use cp -n to copy only files that don't exist in destination
-        cp -Rnv "$PHOTO_BACKUP/"* "$PHOTO_DIR/" 2>/dev/null || true
+        cp -Rn "$PHOTO_BACKUP/"* "$PHOTO_DIR/" 2>/dev/null || true
     fi
 
     # Count files after sync

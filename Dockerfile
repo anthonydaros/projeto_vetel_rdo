@@ -192,11 +192,18 @@ COPY --from=composer-build /app/composer.lock* ./composer.lock
 # Copy application code
 COPY . .
 
-# Backup existing photos for volume initialization
-# This preserves photos in the image even when using named volumes
-RUN if [ -d /var/www/html/img/album ] && [ "$(ls -A /var/www/html/img/album 2>/dev/null)" ]; then \
-        cp -R /var/www/html/img/album/* /var/www/html/img/album_backup/ 2>/dev/null || true; \
-        echo "Photos backed up for volume initialization"; \
+# Backup ALL photos for volume initialization
+# This ensures photos from Git are available even when using named volumes
+RUN echo "Backing up photos from Git repository..." \
+    && ls -la /var/www/html/img/album/ | head -20 \
+    && if [ -d /var/www/html/img/album ]; then \
+        photo_count=$(find /var/www/html/img/album -type f \( -name "*.jpg" -o -name "*.jpeg" -o -name "*.png" \) | wc -l); \
+        echo "Found $photo_count photos to backup"; \
+        cp -Rf /var/www/html/img/album/* /var/www/html/img/album_backup/ 2>/dev/null || true; \
+        backup_count=$(find /var/www/html/img/album_backup -type f \( -name "*.jpg" -o -name "*.jpeg" -o -name "*.png" \) | wc -l); \
+        echo "Backed up $backup_count photos for volume initialization"; \
+    else \
+        echo "WARNING: No album directory found!"; \
     fi
 
 # Move entrypoint script to proper location and set permissions
