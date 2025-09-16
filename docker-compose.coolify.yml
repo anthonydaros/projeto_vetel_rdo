@@ -9,8 +9,10 @@ services:
 
     environment:
       # Database Configuration (External MySQL)
+      # Using both DB_NAME and DB_DATABASE for compatibility
       DB_HOST: "103.199.185.165"
       DB_PORT: "5987"
+      DB_NAME: "default"
       DB_DATABASE: "default"
       DB_USERNAME: "mariadb"
       DB_PASSWORD: "hr6nhoC6TWfMyAoFZbhB4TPsKoomu00U0gGov1MIsiTihJiG4KTBYXJrpzW2g1n8"
@@ -32,11 +34,26 @@ services:
       PHOTO_STORAGE_PATH: "/var/www/html/img/album"
 
     volumes:
+      # Using bind mounts for Coolify
       - ./uploads:/var/www/html/img/album
       - ./reports:/var/www/html/relatorios
       - ./sessions:/var/www/sessions
       - ./logs:/var/log/apache2
 
-    # Expose port 80 for Coolify
+    # Health check for monitoring
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health-simple.php"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    # Expose port 80 for Coolify proxy
     expose:
       - 80
+
+    # Labels for Coolify (optional but recommended)
+    labels:
+      - "coolify.managed=true"
+      - "coolify.type=application"
+      - "coolify.name=projeto-vetel-rdo"
