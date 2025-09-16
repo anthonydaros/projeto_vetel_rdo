@@ -182,25 +182,59 @@ function getValidImageSrc(string $imageUrl): string
 
 		// Debug: List what files are actually in the directory
 		$dirPath = __DIR__ . '/' . $photoStoragePath;
-		if (is_dir($dirPath)) {
+
+		// In Docker, also check the /var/www/html path
+		$dockerPath = '/var/www/html/' . $photoStoragePath;
+
+		if (file_exists('/.dockerenv') && is_dir($dockerPath)) {
+			// We're in Docker, check Docker volume
+			$testDockerPath = $dockerPath . '/' . $fileName;
+			if (file_exists($testDockerPath)) {
+				error_log("PDF Image Processing - Found in Docker volume: $testDockerPath");
+				$absolutePath = $testDockerPath;
+				// Don't return error, continue to base64 encoding below
+			} else {
+				// Try different extensions in Docker
+				foreach ($possibleExtensions as $ext) {
+					$testFileName = $fileWithoutExt . $ext;
+					$testDockerPath = $dockerPath . '/' . $testFileName;
+					if (file_exists($testDockerPath)) {
+						$absolutePath = $testDockerPath;
+						$actualFileName = $testFileName;
+						error_log("PDF Image Processing - Found in Docker with different extension: $testFileName");
+						break;
+					}
+				}
+			}
+		}
+
+		// If still not found, check local directory
+		if (!$absolutePath && is_dir($dirPath)) {
 			$files = scandir($dirPath);
 			$imageFiles = array_filter($files, function($f) use ($fileWithoutExt) {
 				return strpos($f, $fileWithoutExt) === 0;
 			});
 			error_log("PDF Image Processing - Directory exists: $dirPath");
 			error_log("PDF Image Processing - Similar files found: " . implode(', ', $imageFiles));
-		} else {
-			error_log("PDF Image Processing - Directory does not exist: $dirPath");
 		}
 
-		// Return SVG placeholder for missing images
-		error_log("PDF Image Processing - Using SVG placeholder for missing: $fileName");
-		return 'data:image/svg+xml;base64,' . base64_encode(
-			'<svg xmlns="http://www.w3.org/2000/svg" width="150" height="100" viewBox="0 0 150 100">' .
-			'<rect width="150" height="100" fill="#f0f0f0" stroke="#ccc"/>' .
-			'<text x="75" y="55" text-anchor="middle" fill="#666" font-size="12">Imagem não encontrada</text>' .
-			'</svg>'
-		);
+		// If still not found after all attempts
+		if (!$absolutePath || !file_exists($absolutePath)) {
+			error_log("PDF Image Processing - Image not found in any location");
+			error_log("PDF Image Processing - Tried: " . __DIR__ . '/' . $photoStoragePath . '/' . $fileName);
+			if (file_exists('/.dockerenv')) {
+				error_log("PDF Image Processing - Also tried Docker: $dockerPath/$fileName");
+			}
+
+			// Return SVG placeholder for missing images
+			error_log("PDF Image Processing - Using SVG placeholder for missing: $fileName");
+			return 'data:image/svg+xml;base64,' . base64_encode(
+				'<svg xmlns="http://www.w3.org/2000/svg" width="150" height="100" viewBox="0 0 150 100">' .
+				'<rect width="150" height="100" fill="#f0f0f0" stroke="#ccc"/>' .
+				'<text x="75" y="55" text-anchor="middle" fill="#666" font-size="12">Imagem não encontrada</text>' .
+				'</svg>'
+			);
+		}
 	}
 	
 	// For PDF generation, always use base64 encoding for reliability

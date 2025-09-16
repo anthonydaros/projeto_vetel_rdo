@@ -200,9 +200,9 @@ if (isset($_FILES['file']) && isset($_FILES['file']['tmp_name']) && !empty($_FIL
 	// Optimized DOMPDF configuration for production
 	$options->set([
 		'isHtml5ParserEnabled' => true,
-		'isRemoteEnabled' => true,
+		'isRemoteEnabled' => false, // Disable remote to force base64 images
 		'isPhpEnabled' => true,
-		'chroot' => realpath(__DIR__), // Restrict file access to project directory
+		'chroot' => null, // Remove chroot restriction for Docker compatibility
 		'enableCssFloat' => true,
 		'enableJavascript' => false,
 		'tempDir' => sys_get_temp_dir(),
@@ -224,9 +224,10 @@ if (isset($_FILES['file']) && isset($_FILES['file']['tmp_name']) && !empty($_FIL
 	]);
 
 	$dompdf->setOptions($options);
-	
-	error_log("PDF Generation - DOMPDF configured with chroot: " . realpath(__DIR__));
+
+	error_log("PDF Generation - DOMPDF configured (chroot disabled for Docker compatibility)");
 	error_log("PDF Generation - Temp dir: " . sys_get_temp_dir());
+	error_log("PDF Generation - Remote images: DISABLED (using base64 only)");
 	
 	// Images are now preloaded via JavaScript before form submission
 	// No need for artificial delay
