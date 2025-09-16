@@ -25,27 +25,32 @@ fi
 PHOTO_DIR="/var/www/html/img/album"
 PHOTO_BACKUP="/var/www/html/img/album_backup"
 
-# If this is a fresh volume (empty directory), copy existing photos from image
-if [ -d "$PHOTO_DIR" ]; then
-    FILE_COUNT=$(find "$PHOTO_DIR" -type f -name "*.jpg" -o -name "*.jpeg" -o -name "*.png" -o -name "*.webp" 2>/dev/null | wc -l)
-    echo "Found $FILE_COUNT photos in volume"
-
-    # If volume is empty but backup exists, restore photos
-    if [ "$FILE_COUNT" -eq 0 ] && [ -d "$PHOTO_BACKUP" ]; then
-        echo "Volume is empty. Restoring photos from image backup..."
-        cp -Rpv "$PHOTO_BACKUP/"* "$PHOTO_DIR/" 2>/dev/null || true
-        echo "Photos restored from backup"
-    fi
-else
+# Create directory if it doesn't exist
+if [ ! -d "$PHOTO_DIR" ]; then
     echo "Creating uploads directory..."
     mkdir -p "$PHOTO_DIR"
+fi
 
-    # If backup exists, copy photos
-    if [ -d "$PHOTO_BACKUP" ]; then
-        echo "Copying initial photos from image..."
-        cp -Rpv "$PHOTO_BACKUP/"* "$PHOTO_DIR/" 2>/dev/null || true
-        echo "Initial photos copied"
-    fi
+# Always sync photos from backup to volume (only copy files that don't exist)
+if [ -d "$PHOTO_BACKUP" ]; then
+    echo "Syncing photos from backup to volume..."
+
+    # Count files before sync
+    BEFORE_COUNT=$(find "$PHOTO_DIR" -type f \( -name "*.jpg" -o -name "*.jpeg" -o -name "*.png" -o -name "*.webp" \) 2>/dev/null | wc -l)
+    echo "Photos in volume before sync: $BEFORE_COUNT"
+
+    # Use cp -n to copy only files that don't exist in destination
+    # This preserves existing files while adding new ones
+    cp -Rnv "$PHOTO_BACKUP/"* "$PHOTO_DIR/" 2>/dev/null || true
+
+    # Count files after sync
+    AFTER_COUNT=$(find "$PHOTO_DIR" -type f \( -name "*.jpg" -o -name "*.jpeg" -o -name "*.png" -o -name "*.webp" \) 2>/dev/null | wc -l)
+    NEW_FILES=$((AFTER_COUNT - BEFORE_COUNT))
+
+    echo "Photos in volume after sync: $AFTER_COUNT"
+    echo "New photos synced: $NEW_FILES"
+else
+    echo "No backup directory found, skipping photo sync"
 fi
 
 # Set proper ownership
