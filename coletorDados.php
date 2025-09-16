@@ -9,12 +9,14 @@ ini_set('max_execution_time', '300');
 // require_once __DIR__ . '/bootstrap.php'; // Nova arquitetura - temporariamente desabilitado
 require_once __DIR__ . '/startup.php'; // Includes e DAO
 require_once __DIR__ . '/ftpFunctions.php';
+require_once __DIR__ . '/helpers/PhotoPathResolver.php';
 
 use Src\Exception\ServiceException;
 use Config\Config;
 use Models\Connection;
 use Models\DAO;
 use Models\Imagem;
+use Helpers\PhotoPathResolver;
 
 // Nova lógica de upload de imagens
 if (isset($_FILES['file']) && isset($_POST['id_diario_obra'])) {
@@ -1659,10 +1661,11 @@ function downloadFile($localFile)
         return new Promise((resolve, reject) => {
             // Get all images from the album
             const albumImages = [];
-            <?php if (!empty($album)) { 
-                $relativePath = Config::get('PHOTO_STORAGE_PATH', 'img/album');
+            <?php if (!empty($album)) {
+                // Use web path for JavaScript URLs (not filesystem path)
+                $webPath = PhotoPathResolver::getWebPath();
                 foreach ($album as $img) { ?>
-                    albumImages.push('<?php echo htmlspecialchars($relativePath . '/' . $img['url']) ?>');
+                    albumImages.push('<?php echo htmlspecialchars('/' . trim($webPath, '/') . '/' . $img['url']) ?>');
             <?php }} ?>
             
             console.log('Images to preload:', albumImages);
