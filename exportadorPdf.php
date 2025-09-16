@@ -11,8 +11,14 @@ use Dompdf\Dompdf;
 use Config\Config;
 use Helpers\FileHelper;
 
-// Define photo storage path using configuration
-$pathAlbum = __DIR__ . '/' . Config::get('PHOTO_STORAGE_PATH', 'img/album');
+// Define photo storage path based on environment
+if (file_exists('/.dockerenv')) {
+	// Running in Docker - use absolute volume path
+	$pathAlbum = '/var/www/html/img/album';
+} else {
+	// Local development - use relative path
+	$pathAlbum = __DIR__ . '/' . Config::get('PHOTO_STORAGE_PATH', 'img/album');
+}
 
 if (isset($_FILES['file']) && isset($_FILES['file']['tmp_name']) && !empty($_FILES['file']['name'])) {
 	// cleanDir($pathAlbum);
@@ -352,8 +358,14 @@ if (isset($_FILES['file']) && isset($_FILES['file']['tmp_name']) && !empty($_FIL
 
 function cleanAlbumDiario($idDiarioObra)
 {
-	// Use configuration-based path instead of undefined global
-	$pathAlbum = __DIR__ . '/' . Config::get('PHOTO_STORAGE_PATH', 'img/album');
+	// Use environment-aware path
+	if (file_exists('/.dockerenv')) {
+		// Running in Docker - use absolute volume path
+		$pathAlbum = '/var/www/html/img/album';
+	} else {
+		// Local development - use relative path
+		$pathAlbum = __DIR__ . '/' . Config::get('PHOTO_STORAGE_PATH', 'img/album');
+	}
 
 	if (!is_dir($pathAlbum)) {
 		error_log("Warning: Album directory does not exist: $pathAlbum");

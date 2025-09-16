@@ -28,7 +28,7 @@ class ImageUploadService
 		$this->processor = $processor;
 		$this->repository = $repository;
 		$this->config = array_merge([
-			'base_path' => __DIR__ . '/../../img/album',
+			'base_path' => file_exists('/.dockerenv') ? '/var/www/html/img/album' : __DIR__ . '/../../img/album',
 			'max_files_per_diario' => 20,
 			'generate_thumbnails' => true,
 			'optimize_images' => true,

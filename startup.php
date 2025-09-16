@@ -38,8 +38,14 @@ if (Config::get('APP_DEBUG', false)) {
 	ini_set('error_log', __DIR__ . '/logs/error.log');
 }
 
-// Set photo album path from configuration
-$pathAlbum = __DIR__ . '/' . Config::get('PHOTO_STORAGE_PATH', 'img/album');
+// Set photo album path based on environment
+if (file_exists('/.dockerenv')) {
+	// Running in Docker - use absolute volume path
+	$pathAlbum = '/var/www/html/img/album';
+} else {
+	// Local development - use relative path
+	$pathAlbum = __DIR__ . '/' . Config::get('PHOTO_STORAGE_PATH', 'img/album');
+}
 
 // Initialize database connection
 $pdo = Connection::getPDO();

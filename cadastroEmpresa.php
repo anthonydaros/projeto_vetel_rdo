@@ -11,7 +11,8 @@ use Auth\CSRF;
  */
 function isLogoAlreadyRegistered(string $logoName): bool
 {
-	$logoDirectory = __DIR__ . '/img/logo';
+	// Environment-aware logo directory
+	$logoDirectory = (file_exists('/.dockerenv') ? '/var/www/html' : __DIR__) . '/img/logo';
 
 	if (!is_dir($logoDirectory)) {
 		return false;

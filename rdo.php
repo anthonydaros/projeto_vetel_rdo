@@ -63,9 +63,15 @@ function getValidLogoSrc(string $logoUrl): string
 		$fileName = basename($logoUrl);
 	}
 	
-	// Build paths for logo directory
+	// Build paths for logo directory (Docker-aware)
 	$logoPath = 'img/logo';
-	$absolutePath = __DIR__ . '/' . $logoPath . '/' . $fileName;
+	if (file_exists('/.dockerenv')) {
+		// Running in Docker - use volume path
+		$absolutePath = '/var/www/html/' . $logoPath . '/' . $fileName;
+	} else {
+		// Local development
+		$absolutePath = __DIR__ . '/' . $logoPath . '/' . $fileName;
+	}
 	$relativePath = $logoPath . '/' . $fileName;
 	
 	// Reduced logging - only log errors

@@ -98,7 +98,7 @@ $container->singleton('db', function () use ($container) {
 });
 
 $container->singleton('cache', function () {
-	$cacheDir = __DIR__ . '/storage/cache';
+	$cacheDir = file_exists('/.dockerenv') ? '/var/www/html/storage/cache' : __DIR__ . '/storage/cache';
 	return new CacheManager(new FileCache($cacheDir));
 });
 
@@ -150,7 +150,7 @@ $container->singleton('image.upload', function () use ($container) {
 		$container->get('image.processor'),
 		$container->get('image.repository'),
 		[
-			'base_path' => __DIR__ . '/img/album',
+			'base_path' => file_exists('/.dockerenv') ? '/var/www/html/img/album' : __DIR__ . '/img/album',
 			'max_files_per_diario' => 20,
 			'max_size' => 10 * 1024 * 1024
 		]
@@ -185,12 +185,24 @@ function session(): SessionManager
 session()->start();
 
 // Create storage directories if needed
-$directories = [
-	__DIR__ . '/storage',
-	__DIR__ . '/storage/cache',
-	__DIR__ . '/storage/logs',
-	__DIR__ . '/storage/uploads'
-];
+// Determine storage paths based on environment
+if (file_exists('/.dockerenv')) {
+	// Running in Docker - use volume paths
+	$directories = [
+		'/var/www/html/storage',
+		'/var/www/html/storage/cache',
+		'/var/www/html/storage/logs',
+		'/var/www/html/storage/uploads'
+	];
+} else {
+	// Local development
+	$directories = [
+		__DIR__ . '/storage',
+		__DIR__ . '/storage/cache',
+		__DIR__ . '/storage/logs',
+		__DIR__ . '/storage/uploads'
+	];
+}
 
 foreach ($directories as $dir) {
 	if (!is_dir($dir)) {

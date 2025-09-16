@@ -64,22 +64,42 @@ else
     echo "No backup directory found, skipping photo sync"
 fi
 
-# Set proper ownership
-chown -R www-data:www-data /var/www/html/img
-
 # Create relatorios directory if it doesn't exist
 if [ ! -d "/var/www/html/relatorios" ]; then
     echo "Creating reports directory..."
     mkdir -p /var/www/html/relatorios
-    chown -R www-data:www-data /var/www/html/relatorios
 fi
 
-# Ensure proper permissions
+# Ensure proper permissions for all directories
 echo "Setting permissions..."
-chown -R www-data:www-data /var/www/html/img
-chown -R www-data:www-data /var/www/html/relatorios
-chmod -R 755 /var/www/html/img
-chmod -R 755 /var/www/html/relatorios
+
+# Fix ownership for all web directories
+chown -R www-data:www-data /var/www/html
+
+# Set proper permissions for upload directories
+# Album directory needs write permissions for uploads
+chmod -R 777 /var/www/html/img/album
+chmod -R 777 /var/www/html/relatorios
+
+# Logo directory can be more restrictive
+chmod -R 755 /var/www/html/img/logo
+
+# Ensure www-data can write to session directory
+chmod -R 777 /var/www/sessions
+
+# Verify permissions are set correctly
+echo "Verifying permissions..."
+if [ -w "/var/www/html/img/album" ]; then
+    echo "✓ Album directory is writable"
+else
+    echo "✗ WARNING: Album directory is NOT writable!"
+fi
+
+if [ -w "/var/www/html/relatorios" ]; then
+    echo "✓ Reports directory is writable"
+else
+    echo "✗ WARNING: Reports directory is NOT writable!"
+fi
 
 # Start Apache
 echo "Starting Apache..."

@@ -68,7 +68,8 @@ if (isset($_FILES['file']) && isset($_POST['id_diario_obra'])) {
 		$maxAttempts = 100;
 		for ($i = $imageIndex; $i < $imageIndex + $maxAttempts; $i++) {
 			$filename = "diario-{$diarioId}-foto-{$i}.{$extension}";
-			$testPath = __DIR__ . '/img/album/' . $filename;
+			// Use environment-aware path for testing
+			$testPath = (file_exists('/.dockerenv') ? '/var/www/html' : __DIR__) . '/img/album/' . $filename;
 			// Check if file exists in filesystem or database
 			$existsInDb = false;
 			foreach ($album as $img) {
@@ -85,17 +86,36 @@ if (isset($_FILES['file']) && isset($_POST['id_diario_obra'])) {
 			throw new Exception('Não foi possível gerar nome único para a imagem');
 		}
 		
-		// Ensure directory exists with proper permissions
-		$uploadDir = __DIR__ . '/img/album/';
-		if (!is_dir($uploadDir)) {
-			if (!mkdir($uploadDir, 0777, true)) {
-				throw new Exception('Não foi possível criar diretório de upload');
-			}
+		// Determine upload directory based on environment
+		// In Docker, we use the volume mount path directly
+		if (file_exists('/.dockerenv')) {
+			// Running in Docker - use absolute path to volume
+			$uploadDir = '/var/www/html/img/album/';
+			error_log("Upload: Running in Docker, using volume path: $uploadDir");
+		} else {
+			// Local development
+			$uploadDir = __DIR__ . '/img/album/';
+			error_log("Upload: Running locally, using relative path: $uploadDir");
 		}
-		
+
+		// Ensure directory exists with proper permissions
+		if (!is_dir($uploadDir)) {
+			error_log("Upload: Creating directory: $uploadDir");
+			if (!mkdir($uploadDir, 0777, true)) {
+				throw new Exception('Não foi possível criar diretório de upload: ' . $uploadDir);
+			}
+			// Set permissions for Docker
+			chmod($uploadDir, 0777);
+		}
+
 		// Make sure directory is writable
 		if (!is_writable($uploadDir)) {
-			throw new Exception('Diretório de upload sem permissão de escrita');
+			error_log("Upload: Directory not writable, attempting to fix permissions: $uploadDir");
+			// Try to fix permissions
+			@chmod($uploadDir, 0777);
+			if (!is_writable($uploadDir)) {
+				throw new Exception('Diretório de upload sem permissão de escrita: ' . $uploadDir);
+			}
 		}
 		
 		$uploadPath = $uploadDir . $filename;
