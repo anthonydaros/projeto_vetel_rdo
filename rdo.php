@@ -121,15 +121,26 @@ function getValidLogoSrc(string $logoUrl): string
  */
 function getValidImageSrc(string $imageUrl): string
 {
-	// Handle both cases: filename-only and full-path URLs
-	if (strpos($imageUrl, '/') === false) {
-		// New format: just filename
-		$fileName = $imageUrl;
-	} else {
-		// Legacy format: extract filename from full path
+	// Debug: Log the original input
+	error_log("PDF Image Processing - Original input URL: '$imageUrl'");
+
+	// Clean up any absolute paths that might be in the database
+	// Handle cases like '/var/www/html/img/album/file.jpg' or just 'file.jpg'
+	if (strpos($imageUrl, '/var/www') !== false) {
+		// Absolute server path - extract just the filename
 		$fileName = basename($imageUrl);
+		error_log("PDF Image Processing - WARNING: Database contains absolute path! Extracting filename: $fileName from: $imageUrl");
+		error_log("PDF Image Processing - Please run fix_image_paths.php to clean the database");
+	} elseif (strpos($imageUrl, '/') === false) {
+		// Correct format: just filename
+		$fileName = $imageUrl;
+		error_log("PDF Image Processing - Correct format (filename only): $fileName");
+	} else {
+		// Some other path format - extract filename to be safe
+		$fileName = basename($imageUrl);
+		error_log("PDF Image Processing - Path format detected, extracting filename: $fileName from: $imageUrl");
 	}
-	
+
 	// Build paths using configured photo storage path
 	$photoStoragePath = \Config\Config::get('PHOTO_STORAGE_PATH', 'img/album');
 
@@ -137,10 +148,17 @@ function getValidImageSrc(string $imageUrl): string
 	$absolutePath = null;
 	$actualFileName = $fileName;
 
+	// Debug: Log what we're looking for
+	error_log("PDF Image Processing - Looking for image: $fileName");
+	error_log("PDF Image Processing - Base directory: " . __DIR__);
+	error_log("PDF Image Processing - Photo storage path: $photoStoragePath");
+
 	// First, try with the filename as-is
 	$testPath = __DIR__ . '/' . $photoStoragePath . '/' . $fileName;
+	error_log("PDF Image Processing - Testing path: $testPath");
 	if (file_exists($testPath)) {
 		$absolutePath = $testPath;
+		error_log("PDF Image Processing - Found at: $testPath");
 	} else {
 		// Try different extensions
 		$fileWithoutExt = preg_replace('/\.(jpg|jpeg|png|webp)$/i', '', $fileName);
@@ -161,6 +179,19 @@ function getValidImageSrc(string $imageUrl): string
 	// Check if file exists locally
 	if (!$absolutePath || !file_exists($absolutePath)) {
 		error_log("DOMPDF ERROR: Missing image file for: $fileName (original URL: $imageUrl)");
+
+		// Debug: List what files are actually in the directory
+		$dirPath = __DIR__ . '/' . $photoStoragePath;
+		if (is_dir($dirPath)) {
+			$files = scandir($dirPath);
+			$imageFiles = array_filter($files, function($f) use ($fileWithoutExt) {
+				return strpos($f, $fileWithoutExt) === 0;
+			});
+			error_log("PDF Image Processing - Directory exists: $dirPath");
+			error_log("PDF Image Processing - Similar files found: " . implode(', ', $imageFiles));
+		} else {
+			error_log("PDF Image Processing - Directory does not exist: $dirPath");
+		}
 
 		// Return SVG placeholder for missing images
 		error_log("PDF Image Processing - Using SVG placeholder for missing: $fileName");
