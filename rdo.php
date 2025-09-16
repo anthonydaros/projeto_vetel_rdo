@@ -132,13 +132,36 @@ function getValidImageSrc(string $imageUrl): string
 	
 	// Build paths using configured photo storage path
 	$photoStoragePath = \Config\Config::get('PHOTO_STORAGE_PATH', 'img/album');
-	$absolutePath = __DIR__ . '/' . $photoStoragePath . '/' . $fileName;
-	$httpUrl = $photoStoragePath . '/' . $fileName;
-	
+
+	// Try multiple extensions to handle .jpg/.jpeg inconsistencies
+	$absolutePath = null;
+	$actualFileName = $fileName;
+
+	// First, try with the filename as-is
+	$testPath = __DIR__ . '/' . $photoStoragePath . '/' . $fileName;
+	if (file_exists($testPath)) {
+		$absolutePath = $testPath;
+	} else {
+		// Try different extensions
+		$fileWithoutExt = preg_replace('/\.(jpg|jpeg|png|webp)$/i', '', $fileName);
+		$possibleExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
+
+		foreach ($possibleExtensions as $ext) {
+			$testFileName = $fileWithoutExt . $ext;
+			$testPath = __DIR__ . '/' . $photoStoragePath . '/' . $testFileName;
+			if (file_exists($testPath)) {
+				$absolutePath = $testPath;
+				$actualFileName = $testFileName;
+				error_log("PDF Image Processing - Found image with different extension: $testFileName (original: $fileName)");
+				break;
+			}
+		}
+	}
+
 	// Check if file exists locally
-	if (!file_exists($absolutePath)) {
-		error_log("DOMPDF ERROR: Missing image file: $absolutePath (original URL: $imageUrl)");
-		
+	if (!$absolutePath || !file_exists($absolutePath)) {
+		error_log("DOMPDF ERROR: Missing image file for: $fileName (original URL: $imageUrl)");
+
 		// Return SVG placeholder for missing images
 		error_log("PDF Image Processing - Using SVG placeholder for missing: $fileName");
 		return 'data:image/svg+xml;base64,' . base64_encode(

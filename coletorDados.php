@@ -161,6 +161,27 @@ if (isset($_FILES['file']) && isset($_POST['id_diario_obra'])) {
 if (isset($_GET['ajax']) && $_GET['ajax'] === 'get_photos' && isset($_GET['id_diario_obra'])) {
 	header('Content-Type: application/json');
 	$photos = $dao->buscaAlbumDiario($_GET['id_diario_obra']);
+
+	// Check for actual file existence and correct extension
+	$baseDir = __DIR__ . '/img/album/';
+	foreach ($photos as &$photo) {
+		$url = $photo['url'];
+
+		// If URL doesn't contain path, check for file with different extensions
+		if (strpos($url, '/') === false) {
+			$pathWithoutExt = pathinfo($url, PATHINFO_FILENAME);
+			$possibleExtensions = ['jpg', 'jpeg', 'png', 'webp'];
+
+			foreach ($possibleExtensions as $ext) {
+				$testFile = $baseDir . $pathWithoutExt . '.' . $ext;
+				if (file_exists($testFile)) {
+					$photo['url'] = $pathWithoutExt . '.' . $ext;
+					break;
+				}
+			}
+		}
+	}
+
 	echo json_encode($photos);
 	exit;
 }

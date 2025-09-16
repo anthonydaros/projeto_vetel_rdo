@@ -175,6 +175,7 @@ EOF
 
 # Create necessary directories
 RUN mkdir -p /var/www/html/img/album \
+    && mkdir -p /var/www/html/img/album_backup \
     && mkdir -p /var/www/html/relatorios \
     && mkdir -p /var/www/html/vendor \
     && mkdir -p /var/log/apache2 \
@@ -190,6 +191,13 @@ COPY --from=composer-build /app/composer.lock* ./composer.lock
 
 # Copy application code
 COPY . .
+
+# Backup existing photos for volume initialization
+# This preserves photos in the image even when using named volumes
+RUN if [ -d /var/www/html/img/album ] && [ "$(ls -A /var/www/html/img/album 2>/dev/null)" ]; then \
+        cp -R /var/www/html/img/album/* /var/www/html/img/album_backup/ 2>/dev/null || true; \
+        echo "Photos backed up for volume initialization"; \
+    fi
 
 # Move entrypoint script to proper location and set permissions
 RUN mv /var/www/html/docker-entrypoint.sh /usr/local/bin/ \
