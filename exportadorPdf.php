@@ -95,6 +95,8 @@ if (isset($_FILES['file']) && isset($_FILES['file']['tmp_name']) && !empty($_FIL
 	$time_start = microtime(true);
 
 	extract($_POST);
+	error_log("PDF Generation - POST data extracted");
+	error_log("PDF Generation - id_diario_obra value: " . (isset($id_diario_obra) ? $id_diario_obra : 'NOT SET'));
 
 	$diarioObra = $dao->buscaDiarioObraPorId($id_diario_obra);
 	$contratante = $dao->buscaEmpresaPorId($diarioObra->fk_id_contratante);
@@ -206,7 +208,7 @@ if (isset($_FILES['file']) && isset($_FILES['file']['tmp_name']) && !empty($_FIL
 	// Optimized DOMPDF configuration for production
 	$options->set([
 		'isHtml5ParserEnabled' => true,
-		'isRemoteEnabled' => false, // Disable remote to force base64 images
+		'isRemoteEnabled' => true, // Enable to allow file:// URLs in Docker
 		'isPhpEnabled' => true,
 		'chroot' => null, // Remove chroot restriction for Docker compatibility
 		'enableCssFloat' => true,
@@ -238,12 +240,53 @@ if (isset($_FILES['file']) && isset($_FILES['file']['tmp_name']) && !empty($_FIL
 	// Images are now preloaded via JavaScript before form submission
 	// No need for artificial delay
 	
+	// Get album data BEFORE generating HTML
+	$album = $dao->buscaAlbumDiario($id_diario_obra);
+	error_log("PDF Generation - Album loaded: " . count($album) . " photos for diary ID: $id_diario_obra");
+	if (count($album) > 0) {
+		error_log("PDF Generation - First photo: " . $album[0]['url']);
+	}
+
 	// Generate HTML with error handling
 	error_log("PDF Generation - Starting HTML generation");
+	// Debug variables before including rdo.php
+	error_log("PDF Generation - Before rdo.php include:");
+	error_log("  - \$album count: " . count($album));
+	error_log("  - \$diarioObra->id_diario_obra: " . $diarioObra->id_diario_obra);
+	error_log("  - \$id_diario_obra: " . $id_diario_obra);
+	
+	// CRITICAL: Make sure variables are in scope for rdo.php
+	// Use a more robust approach for Apache/Docker compatibility
+	$GLOBALS['album'] = $album; // Ensure album is accessible
+	$GLOBALS['id_diario_obra'] = $id_diario_obra;
+	$GLOBALS['diarioObra'] = $diarioObra;
+	$GLOBALS['contratante'] = $contratante;
+	$GLOBALS['contratada'] = $contratada;
+	$GLOBALS['dao'] = $dao;
+
+	// Create local variables for reliable access in included file
+	$rdo_album = $album;
+	$rdo_id_diario_obra = $id_diario_obra;
+	$rdo_diarioObra = $diarioObra;
+	$rdo_contratante = $contratante;
+	$rdo_contratada = $contratada;
+	$rdo_dao = $dao;
+
+	// Explicitly disable output buffering temporarily to avoid conflicts
+	$ob_level = ob_get_level();
+	while (ob_get_level()) {
+		ob_end_clean();
+	}
+
 	ob_start();
 
 	try {
-		require_once __DIR__ . '/rdo.php';
+		// Use require instead of require_once to ensure fresh execution
+		error_log("PDF Generation - About to include rdo.php");
+		echo "<!-- DEBUG: About to include rdo.php -->";
+		require __DIR__ . '/rdo.php';
+		echo "<!-- DEBUG: rdo.php included successfully -->";
+		error_log("PDF Generation - rdo.php included successfully");
 		$html = ob_get_contents();
 		ob_end_clean();
 		

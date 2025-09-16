@@ -127,115 +127,62 @@ function getValidLogoSrc(string $logoUrl): string
  */
 function getValidImageSrc(string $imageUrl): string
 {
-	// Debug: Log the original input
-	error_log("PDF Image Processing - Original input URL: '$imageUrl'");
-
-	// Clean up any absolute paths that might be in the database
-	// Handle cases like '/var/www/html/img/album/file.jpg' or just 'file.jpg'
-	if (strpos($imageUrl, '/var/www') !== false) {
-		// Absolute server path - extract just the filename
-		$fileName = basename($imageUrl);
-		error_log("PDF Image Processing - WARNING: Database contains absolute path! Extracting filename: $fileName from: $imageUrl");
-		error_log("PDF Image Processing - Please run fix_image_paths.php to clean the database");
-	} elseif (strpos($imageUrl, '/') === false) {
-		// Correct format: just filename
-		$fileName = $imageUrl;
-		error_log("PDF Image Processing - Correct format (filename only): $fileName");
-	} else {
-		// Some other path format - extract filename to be safe
-		$fileName = basename($imageUrl);
-		error_log("PDF Image Processing - Path format detected, extracting filename: $fileName from: $imageUrl");
+	// Handle empty URL
+	if (empty($imageUrl)) {
+		return '';
 	}
-
-	// Build paths using configured photo storage path
-	$photoStoragePath = \Config\Config::get('PHOTO_STORAGE_PATH', 'img/album');
-
-	// Try multiple extensions to handle .jpg/.jpeg inconsistencies
-	$absolutePath = null;
-	$actualFileName = $fileName;
-
-	// Debug: Log what we're looking for
-	error_log("PDF Image Processing - Looking for image: $fileName");
-	error_log("PDF Image Processing - Base directory: " . __DIR__);
-	error_log("PDF Image Processing - Photo storage path: $photoStoragePath");
-
-	// First, try with the filename as-is
-	$testPath = __DIR__ . '/' . $photoStoragePath . '/' . $fileName;
-	error_log("PDF Image Processing - Testing path: $testPath");
-	if (file_exists($testPath)) {
-		$absolutePath = $testPath;
-		error_log("PDF Image Processing - Found at: $testPath");
+	
+	// Validate input - reject non-image files
+	$allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
+	$fileExtension = strtolower(pathinfo($imageUrl, PATHINFO_EXTENSION));
+	
+	// Check for invalid extensions
+	if (empty($fileExtension) || !in_array($fileExtension, $allowedExtensions)) {
+		// Return placeholder for invalid files
+		return 'data:image/svg+xml;base64,' . base64_encode(
+			'<svg xmlns="http://www.w3.org/2000/svg" width="150" height="100">' .
+			'<rect width="150" height="100" fill="#f0f0f0" stroke="#ccc"/>' .
+			'<text x="75" y="55" text-anchor="middle" fill="#666" font-size="12">Formato inválido</text>' .
+			'</svg>'
+		);
+	}
+	
+	// Extract filename only (handle both formats)
+	$fileName = basename($imageUrl);
+	
+	// Build paths similar to logo handling - SIMPLIFIED APPROACH!
+	// This matches the working logo implementation
+	$photoPath = 'img/album';
+	if (file_exists('/.dockerenv')) {
+		// Running in Docker - use volume path directly
+		$absolutePath = '/var/www/html/' . $photoPath . '/' . $fileName;
 	} else {
-		// Try different extensions
-		$fileWithoutExt = preg_replace('/\.(jpg|jpeg|png|webp)$/i', '', $fileName);
-		$possibleExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
-
-		foreach ($possibleExtensions as $ext) {
-			$testFileName = $fileWithoutExt . $ext;
-			$testPath = __DIR__ . '/' . $photoStoragePath . '/' . $testFileName;
-			if (file_exists($testPath)) {
-				$absolutePath = $testPath;
-				$actualFileName = $testFileName;
-				error_log("PDF Image Processing - Found image with different extension: $testFileName (original: $fileName)");
+		// Local development
+		$absolutePath = __DIR__ . '/' . $photoPath . '/' . $fileName;
+	}
+	
+	// Check if file exists
+	error_log("Photo Processing - Checking file exists: $absolutePath");
+	if (!file_exists($absolutePath)) {
+		error_log("Photo Processing - File does not exist at: $absolutePath");
+		// Try alternate extensions (handle jpg/jpeg inconsistency)
+		$fileWithoutExt = pathinfo($fileName, PATHINFO_FILENAME);
+		$alternateExtensions = ['jpg', 'jpeg', 'png'];
+		$found = false;
+		
+		foreach ($alternateExtensions as $ext) {
+			$alternatePath = dirname($absolutePath) . '/' . $fileWithoutExt . '.' . $ext;
+			if (file_exists($alternatePath)) {
+				$absolutePath = $alternatePath;
+				$found = true;
 				break;
 			}
 		}
-	}
-
-	// Check if file exists locally
-	if (!$absolutePath || !file_exists($absolutePath)) {
-		error_log("DOMPDF ERROR: Missing image file for: $fileName (original URL: $imageUrl)");
-
-		// Debug: List what files are actually in the directory
-		$dirPath = __DIR__ . '/' . $photoStoragePath;
-
-		// In Docker, also check the /var/www/html path
-		$dockerPath = '/var/www/html/' . $photoStoragePath;
-
-		if (file_exists('/.dockerenv') && is_dir($dockerPath)) {
-			// We're in Docker, check Docker volume
-			$testDockerPath = $dockerPath . '/' . $fileName;
-			if (file_exists($testDockerPath)) {
-				error_log("PDF Image Processing - Found in Docker volume: $testDockerPath");
-				$absolutePath = $testDockerPath;
-				// Don't return error, continue to base64 encoding below
-			} else {
-				// Try different extensions in Docker
-				foreach ($possibleExtensions as $ext) {
-					$testFileName = $fileWithoutExt . $ext;
-					$testDockerPath = $dockerPath . '/' . $testFileName;
-					if (file_exists($testDockerPath)) {
-						$absolutePath = $testDockerPath;
-						$actualFileName = $testFileName;
-						error_log("PDF Image Processing - Found in Docker with different extension: $testFileName");
-						break;
-					}
-				}
-			}
-		}
-
-		// If still not found, check local directory
-		if (!$absolutePath && is_dir($dirPath)) {
-			$files = scandir($dirPath);
-			$imageFiles = array_filter($files, function($f) use ($fileWithoutExt) {
-				return strpos($f, $fileWithoutExt) === 0;
-			});
-			error_log("PDF Image Processing - Directory exists: $dirPath");
-			error_log("PDF Image Processing - Similar files found: " . implode(', ', $imageFiles));
-		}
-
-		// If still not found after all attempts
-		if (!$absolutePath || !file_exists($absolutePath)) {
-			error_log("PDF Image Processing - Image not found in any location");
-			error_log("PDF Image Processing - Tried: " . __DIR__ . '/' . $photoStoragePath . '/' . $fileName);
-			if (file_exists('/.dockerenv')) {
-				error_log("PDF Image Processing - Also tried Docker: $dockerPath/$fileName");
-			}
-
-			// Return SVG placeholder for missing images
-			error_log("PDF Image Processing - Using SVG placeholder for missing: $fileName");
+		
+		if (!$found) {
+			// Return placeholder for missing images
 			return 'data:image/svg+xml;base64,' . base64_encode(
-				'<svg xmlns="http://www.w3.org/2000/svg" width="150" height="100" viewBox="0 0 150 100">' .
+				'<svg xmlns="http://www.w3.org/2000/svg" width="150" height="100">' .
 				'<rect width="150" height="100" fill="#f0f0f0" stroke="#ccc"/>' .
 				'<text x="75" y="55" text-anchor="middle" fill="#666" font-size="12">Imagem não encontrada</text>' .
 				'</svg>'
@@ -243,13 +190,20 @@ function getValidImageSrc(string $imageUrl): string
 		}
 	}
 	
-	// For PDF generation, always use base64 encoding for reliability
-	// The HTTP URL approach can fail due to network issues or timeouts
-	// Base64 ensures the images are embedded directly in the PDF
+	// Use base64 encoding like logos do - this works in Docker!
+	error_log("Photo Processing - Reading file: $absolutePath");
 	try {
-		error_log("PDF Image Processing - Using base64 encoding for: $fileName");
 		$imageData = file_get_contents($absolutePath);
+		if ($imageData === false) {
+			error_log("Photo Processing - Failed to read file: $absolutePath");
+			throw new Exception("Cannot read file");
+		}
+		
+		$fileSize = strlen($imageData);
+		error_log("Photo Processing - File size: $fileSize bytes");
+		
 		$imageType = strtolower(pathinfo($absolutePath, PATHINFO_EXTENSION));
+		error_log("Photo Processing - Image type: $imageType");
 		
 		// Determine correct MIME type
 		$mimeTypes = [
@@ -263,18 +217,21 @@ function getValidImageSrc(string $imageUrl): string
 		
 		$mimeType = isset($mimeTypes[$imageType]) ? $mimeTypes[$imageType] : 'image/' . $imageType;
 		$base64 = base64_encode($imageData);
+		$base64Length = strlen($base64);
+		error_log("Photo Processing - Base64 length: $base64Length characters");
 		
-		// Return base64 encoded image
-		return 'data:' . $mimeType . ';base64,' . $base64;
+		$result = 'data:' . $mimeType . ';base64,' . $base64;
+		error_log("Photo Processing - Successfully encoded: $fileName");
+		return $result;
 		
 	} catch (Exception $e) {
-		error_log("PDF Image Processing - Error encoding image: " . $e->getMessage());
+		error_log("Photo Processing - Error encoding image: " . $e->getMessage());
 		
-		// Return SVG placeholder on error
+		// Return placeholder on error
 		return 'data:image/svg+xml;base64,' . base64_encode(
-			'<svg xmlns="http://www.w3.org/2000/svg" width="150" height="100" viewBox="0 0 150 100">' .
+			'<svg xmlns="http://www.w3.org/2000/svg" width="150" height="100">' .
 			'<rect width="150" height="100" fill="#f0f0f0" stroke="#ccc"/>' .
-			'<text x="75" y="55" text-anchor="middle" fill="#666" font-size="12">Erro ao carregar imagem</text>' .
+			'<text x="75" y="55" text-anchor="middle" fill="#666" font-size="12">Erro ao carregar</text>' .
 			'</svg>'
 		);
 	}
@@ -283,9 +240,101 @@ function getValidImageSrc(string $imageUrl): string
 // Initialize album data - use configuration from startup.php
 $firstAlbumFile = getFirstAlbumFile($pathAlbum);
 
-$album = $dao->buscaAlbumDiario($diarioObra->id_diario_obra);
+// Check if album is available from GLOBALS, local scope, or prefixed variables
+if (!isset($album)) {
+    if (isset($rdo_album)) {
+        $album = $rdo_album;
+        error_log("RDO - Using album from rdo_album prefixed variable");
+    } elseif (isset($GLOBALS['album'])) {
+        $album = $GLOBALS['album'];
+        error_log("RDO - Using album from GLOBALS");
+    }
+}
+
+// Also get other variables from prefixed names or GLOBALS if not set
+if (!isset($id_diario_obra)) {
+    if (isset($rdo_id_diario_obra)) {
+        $id_diario_obra = $rdo_id_diario_obra;
+        error_log("RDO - Using id_diario_obra from rdo_id_diario_obra: $id_diario_obra");
+    } elseif (isset($GLOBALS['id_diario_obra'])) {
+        $id_diario_obra = $GLOBALS['id_diario_obra'];
+        error_log("RDO - Using id_diario_obra from GLOBALS: $id_diario_obra");
+    }
+}
+
+if (!isset($diarioObra)) {
+    if (isset($rdo_diarioObra)) {
+        $diarioObra = $rdo_diarioObra;
+        error_log("RDO - Using diarioObra from rdo_diarioObra");
+    } elseif (isset($GLOBALS['diarioObra'])) {
+        $diarioObra = $GLOBALS['diarioObra'];
+        error_log("RDO - Using diarioObra from GLOBALS");
+    }
+}
+
+if (!isset($contratante)) {
+    if (isset($rdo_contratante)) {
+        $contratante = $rdo_contratante;
+        error_log("RDO - Using contratante from rdo_contratante");
+    } elseif (isset($GLOBALS['contratante'])) {
+        $contratante = $GLOBALS['contratante'];
+        error_log("RDO - Using contratante from GLOBALS");
+    }
+}
+
+if (!isset($contratada)) {
+    if (isset($rdo_contratada)) {
+        $contratada = $rdo_contratada;
+        error_log("RDO - Using contratada from rdo_contratada");
+    } elseif (isset($GLOBALS['contratada'])) {
+        $contratada = $GLOBALS['contratada'];
+        error_log("RDO - Using contratada from GLOBALS");
+    }
+}
+
+if (!isset($dao)) {
+    if (isset($rdo_dao)) {
+        $dao = $rdo_dao;
+        error_log("RDO - Using dao from rdo_dao");
+    } elseif (isset($GLOBALS['dao'])) {
+        $dao = $GLOBALS['dao'];
+        error_log("RDO - Using dao from GLOBALS");
+    }
+}
+
+// If album is still not loaded, try to load it
+if (!isset($album)) {
+    // Try to get diary ID from various sources
+    $diary_id = null;
+    if (isset($diarioObra) && is_object($diarioObra) && isset($diarioObra->id_diario_obra)) {
+        $diary_id = $diarioObra->id_diario_obra;
+        error_log("RDO - Using diary ID from diarioObra object: $diary_id");
+    } elseif (isset($id_diario_obra)) {
+        $diary_id = $id_diario_obra;
+        error_log("RDO - Using diary ID from id_diario_obra variable: $diary_id");
+    } elseif (isset($_GET['id_diario_obra'])) {
+        $diary_id = $_GET['id_diario_obra'];
+        error_log("RDO - Using diary ID from GET parameter: $diary_id");
+    }
+    
+    if ($diary_id && isset($dao)) {
+        $album = $dao->buscaAlbumDiario($diary_id);
+        error_log("RDO - Loaded album locally with diary ID: $diary_id");
+    } else {
+        $album = [];
+        error_log("RDO - ERROR: No diary ID or DAO available, album will be empty");
+    }
+} else {
+    error_log("RDO - Album already loaded");
+}
+error_log("RDO - Album has " . count($album) . " photos");
+if (count($album) > 0) {
+    error_log("RDO - First photo URL: " . $album[0]['url']);
+    error_log("RDO - Processing photos for display...");
+}
 $albumSize = count($album);
 $remainder = $albumSize % 3;
+error_log("RDO - Album size: $albumSize, remainder: $remainder");
 
 /*
 $pathLogo = $pathAlbum . '/logo';
@@ -308,6 +357,7 @@ foreach($scan as $file)
 }
 */
 ?>
+<!-- DEBUG: RDO.PHP EXECUTION STARTED -->
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -651,57 +701,69 @@ foreach($scan as $file)
                     </tr>
                 </thead>
                 <tbody>
-                    <?php for ($i = 0; $i < $albumSize - $remainder; $i += 3) { ?>
+                    <?php
+                    // SIMPLIFIED PHOTO LOADING: Follow the same pattern as logos
+                    // Load album directly using diarioObra object, just like logos do
+                    $photos = [];
+                    if (isset($diarioObra) && is_object($diarioObra) && isset($dao)) {
+                        $photos = $dao->buscaAlbumDiario($diarioObra->id_diario_obra);
+                        error_log("FOTOS section - Loaded " . count($photos) . " photos");
+                    }
+
+                    $photoCount = count($photos);
+                    $remainder = $photoCount % 3;
+
+                    // Generate photo rows in groups of 3 (same logic but simplified)
+                    for ($i = 0; $i < $photoCount - $remainder; $i += 3) {
+                    ?>
                         <tr>
                             <td>
                                 <p style="text-align: center; vertical-align: middle;">
-                                    <img style="vertical-align: middle;" src="<?php echo htmlspecialchars(getValidImageSrc($album[$i]['url'])) ?>">
+                                    <?php if (isset($photos[$i]['url'])): ?>
+                                        <img style="vertical-align: middle;" src="<?php echo htmlspecialchars(getValidImageSrc($photos[$i]['url'])) ?>">
+                                    <?php endif; ?>
                                 </p>
                             </td>
                             <td>
                                 <p style="text-align: center; vertical-align: middle;">
-                                    <img style="vertical-align: middle;" src="<?php echo htmlspecialchars(getValidImageSrc($album[$i + 1]['url'])) ?>">
+                                    <?php if (isset($photos[$i + 1]['url'])): ?>
+                                        <img style="vertical-align: middle;" src="<?php echo htmlspecialchars(getValidImageSrc($photos[$i + 1]['url'])) ?>">
+                                    <?php endif; ?>
                                 </p>
                             </td>
                             <td>
                                 <p style="text-align: center; vertical-align: middle;">
-                                    <img style="vertical-align: middle;" src="<?php echo htmlspecialchars(getValidImageSrc($album[$i + 2]['url'])) ?>">
+                                    <?php if (isset($photos[$i + 2]['url'])): ?>
+                                        <img style="vertical-align: middle;" src="<?php echo htmlspecialchars(getValidImageSrc($photos[$i + 2]['url'])) ?>">
+                                    <?php endif; ?>
                                 </p>
                             </td>
                         </tr>
                     <?php } ?>
-                    
-                    <?php if ($remainder === 1) { ?>
+
+                    <?php
+                    // Handle remaining photos (if not divisible by 3)
+                    if ($remainder > 0) {
+                    ?>
                         <tr>
+                            <?php for ($j = $photoCount - $remainder; $j < $photoCount; $j++): ?>
                             <td>
                                 <p style="text-align: center; vertical-align: middle;">
-                                    <img style="vertical-align: middle;" src="<?php echo htmlspecialchars(getValidImageSrc($album[$albumSize - 1]['url'])) ?>">
+                                    <?php if (isset($photos[$j]['url'])): ?>
+                                        <img style="vertical-align: middle;" src="<?php echo htmlspecialchars(getValidImageSrc($photos[$j]['url'])) ?>">
+                                    <?php endif; ?>
                                 </p>
                             </td>
-                            <td></td>
-                            <td></td>
-                        </tr>
-                    <?php } ?>
-                    <?php if ($remainder === 2) { ?>
-                        <tr>
+                            <?php endfor; ?>
+
+                            <?php
+                            // Fill remaining cells with empty content
+                            for ($k = 0; $k < (3 - $remainder); $k++): ?>
                             <td>
                                 <p style="text-align: center; vertical-align: middle;">
-                                    <img style="vertical-align: middle;" src="<?php echo htmlspecialchars(getValidImageSrc($album[$albumSize - 2]['url'])) ?>">
                                 </p>
                             </td>
-                            <td>
-                                <p style="text-align: center; vertical-align: middle;">
-                                    <img style="vertical-align: middle;" src="<?php echo htmlspecialchars(getValidImageSrc($album[$albumSize - 1]['url'])) ?>">
-                                </p>
-                            </td>
-                            <td></td>
-                        </tr>
-                    <?php } ?>
-                    <?php for ($i = ceil($albumSize / 3) * 3; $i < 12; $i += 3) { ?>
-                        <tr>
-                            <td></td>
-                            <td></td>
-                            <td></td>
+                            <?php endfor; ?>
                         </tr>
                     <?php } ?>
                 </tbody>

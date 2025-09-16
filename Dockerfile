@@ -58,7 +58,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Enable Apache modules
-RUN a2enmod rewrite headers expires
+RUN a2enmod rewrite headers expires env setenvif
 
 # Configure PHP for production
 RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
@@ -100,6 +100,17 @@ error_log=/var/log/apache2/php_errors.log
 
 ; Timezone
 date.timezone=America/Sao_Paulo
+
+; Variable scope and output buffering for Apache compatibility
+; These settings help Apache mod_php behave more like CLI server for variable scope
+variables_order=GPCS
+register_argc_argv=Off
+auto_globals_jit=On
+output_buffering=0
+implicit_flush=Off
+
+; Include path for better file resolution
+include_path=".:/var/www/html"
 EOF
 
 # Configure Apache with detailed logging
@@ -143,10 +154,10 @@ COPY <<EOF /etc/apache2/sites-available/000-default.conf
         </FilesMatch>
     </Directory>
     
-    # Redirect to HTTPS (Coolify handles SSL termination)
-    RewriteEngine On
-    RewriteCond %{HTTP:X-Forwarded-Proto} !https
-    RewriteRule ^(.*)$ https://%{HTTP_HOST}$1 [R=301,L]
+    # HTTPS redirect removed for local development
+    # RewriteEngine On
+    # RewriteCond %{HTTP:X-Forwarded-Proto} !https
+    # RewriteRule ^(.*)$ https://%{HTTP_HOST}$1 [R=301,L]
     
     # Error pages
     ErrorDocument 404 /404.php

@@ -13,8 +13,8 @@ services:
       # Database Configuration (External MySQL) - REQUIRED
       - DB_HOST=103.199.185.165
       - DB_PORT=5987
-      - DB_NAME=default
-      - DB_USER=mariadb
+      - DB_DATABASE=default
+      - DB_USERNAME=mariadb
       - DB_PASSWORD=hr6nhoC6TWfMyAoFZbhB4TPsKoomu00U0gGov1MIsiTihJiG4KTBYXJrpzW2g1n8
       - DB_CHARSET=utf8
       
@@ -52,6 +52,10 @@ services:
     # Expose port for Coolify (no port mapping needed, Coolify handles it)
     expose:
       - "80"
+
+    # Port mapping for local testing
+    ports:
+      - "8080:80"
     
     # Resource limits
     deploy:
