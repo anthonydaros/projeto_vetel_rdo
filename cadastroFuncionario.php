@@ -1,9 +1,7 @@
 <?php
 require_once __DIR__ . '/startup.php';
-require_once __DIR__ . '/auth/CSRF.php';
 
 use Models\Funcionario;
-use Auth\CSRF;
 
 /**
  * Validates employee form data
@@ -43,11 +41,6 @@ function createEmployee($dao, array $formData, int $companyId): bool
  */
 function handleEmployeeRegistration($dao): void
 {
-	if (!CSRF::verifyPost()) {
-		redirectWithError('invalid_token');
-		return;
-	}
-
 	$validationError = validateEmployeeData();
 	if ($validationError !== null) {
 		redirectWithError($validationError);
@@ -160,11 +153,6 @@ if (isset($_POST['submit'])) {
                     ID inválido fornecido.
                 </div>
             <?php } ?>
-            <?php if (isset($_GET['error']) && $_GET['error'] == 'invalid_token') { ?>
-                <div class="alert alert-danger w-75 mx-auto" role="alert">
-                    Token de segurança inválido.
-                </div>
-            <?php } ?>
 
             <form class="w-75 mx-auto my-4" 
                 action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>"
@@ -201,9 +189,7 @@ if (isset($_POST['submit'])) {
                         </p>
                     <?php } ?>
                 </div>
-                
-                <?php echo CSRF::getTokenField(); ?>
-                
+
                 <button 
                     name="submit"
                     id="submit"
