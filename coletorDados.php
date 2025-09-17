@@ -323,31 +323,18 @@ if (isset($_GET['id_diario_obra'])) {
 
 		die();
 	} elseif (isset($_GET['remover_album']) && $_GET['remover_album'] == 1) {
-		try {
-			$imageUploadService = app('image.upload');
-			$diarioId = (int) $_GET['id_diario_obra'];
-
-			// Remove todas as imagens usando nova arquitetura
-			$result = $imageUploadService->deleteAllImagesFromDiario($diarioId);
-
-			// Fallback: remove imagens restantes do modo legacy
-			foreach ($album as $foto) {
-				if (file_exists($foto['url'])) {
-					unlink($foto['url']);
-				}
+		// Remove imagens do sistema de arquivos
+		foreach ($album as $foto) {
+			$filePath = __DIR__ . '/img/album/' . $foto['url'];
+			if (file_exists($filePath)) {
+				unlink($filePath);
 			}
-
-			// Remove registros legacy do banco
-			$dao->deleteAlbum($diarioId);
-		} catch (ServiceException $e) {
-			// Em caso de erro, usa método legacy
-			foreach ($album as $foto) {
-				if (file_exists($foto['url'])) {
-					unlink($foto['url']);
-				}
-			}
-			$dao->deleteAlbum($_GET['id_diario_obra']);
 		}
+		
+		// Remove registros do banco de dados
+		$dao->deleteAlbum($_GET['id_diario_obra']);
+		
+		// Redireciona de volta para a página
 
 		header("Location: coletorDados.php?id_diario_obra={$_GET['id_diario_obra']}");
 		exit;
@@ -1256,9 +1243,9 @@ function downloadFile($localFile)
     const dropzoneConfig = {
         url: 'coletorDados.php', // Upload endpoint atualizado
         method: 'POST',
-        maxFiles: 20, // Aumentado para 20 conforme nova configuração
+        maxFiles: 12, // Máximo de 12 fotos permitido
         uploadMultiple: false, // Upload individual para melhor controle
-        parallelUploads: 3, // Reduzido para evitar sobrecarga
+        parallelUploads: 12, // Aumentado para processar até 12 fotos simultaneamente
         timeout: 60000, // 60 segundos timeout
         autoProcessQueue: false, // Desabilitado - upload manual via botão SALVAR
         thumbnailWidth: 100,
@@ -1267,12 +1254,12 @@ function downloadFile($localFile)
         maxFilesize: 10, // 10MB máximo
         
         // Mensagens em português
-        dictMaxFilesExceeded: 'Máximo de 20 fotos permitido',
+        dictMaxFilesExceeded: 'Máximo de 12 fotos permitido',
         dictInvalidFileType: 'Extensões permitidas: jpg, jpeg, png, webp',
         dictFileTooBig: 'Arquivo muito grande ({{filesize}}MB). Máximo: {{maxFilesize}}MB',
         dictRemoveFile: 'Excluir',
         dictCancelUpload: 'Cancelar',
-        dictDefaultMessage: '<small class="font-italic text-center">UPLOAD DE FOTOS OTIMIZADAS<br/>(MAX. 20 FOTOS - 10MB cada)</small>',
+        dictDefaultMessage: '<small class="font-italic text-center">UPLOAD DE FOTOS OTIMIZADAS<br/>(MAX. 12 FOTOS - 10MB cada)</small>',
         
         addRemoveLinks: true,
         
@@ -1290,13 +1277,7 @@ function downloadFile($localFile)
                 if (response.success) {
                     file.serverId = response.image_id;
                     file.filename = response.filename;
-                    
-                    // Remove o arquivo do Dropzone após upload bem-sucedido
-                    setTimeout(() => {
-                        // Marca como não deletar do servidor
-                        file.skipServerDelete = true;
-                        dz.removeFile(file);
-                    }, 1500); // Aguarda 1.5 segundos para mostrar o sucesso
+                    file.uploadSuccess = true; // Marca como upload bem-sucedido
                 }
             });
             
@@ -1421,6 +1402,19 @@ function downloadFile($localFile)
                     myDropzone.off("queuecomplete");
                     
                     myDropzone.on("queuecomplete", function() {
+                        // Remove apenas arquivos que foram enviados com sucesso
+                        const successFiles = myDropzone.files.filter(f => f.uploadSuccess === true);
+                        successFiles.forEach(file => {
+                            file.skipServerDelete = true; // Não deletar do servidor
+                            myDropzone.removeFile(file);
+                        });
+                        
+                        // Remove arquivos com erro para limpar o Dropzone
+                        const errorFiles = myDropzone.files.filter(f => f.status === 'error');
+                        errorFiles.forEach(file => {
+                            myDropzone.removeFile(file);
+                        });
+                        
                         resolve();
                     });
                     
@@ -1446,6 +1440,10 @@ function downloadFile($localFile)
                 
                 // Atualiza o valor original
                 window.originalObsGerais = obsGerais;
+                
+                // Atualiza a galeria de fotos após salvar
+                showPhotoGallery();
+                updatePhotoCount();
                 
                 // Mostra mensagem de sucesso
                 if (typeof showSuccessMessage === 'function') {
@@ -1576,13 +1574,34 @@ function downloadFile($localFile)
             fetch(`?ajax=get_photos&id_diario_obra=${diarioId}`)
                 .then(response => response.json())
                 .then(photos => {
-                    photos.forEach((photo, index) => {
+                    // Limitar a 12 fotos e evitar duplicações
+                    const uniquePhotos = [];
+                    const seen = new Set();
+                    
+                    for (let photo of photos) {
+                        if (!seen.has(photo.url) && uniquePhotos.length < 12) {
+                            seen.add(photo.url);
+                            uniquePhotos.push(photo);
+                        }
+                    }
+                    
+                    // Criar miniaturas apenas para fotos únicas
+                    uniquePhotos.forEach((photo, index) => {
                         const thumbnail = createThumbnail(photo.url, index);
                         container.appendChild(thumbnail);
                     });
-                    gallery.style.display = 'block';
+                    
+                    // Só mostrar galeria se houver fotos
+                    if (uniquePhotos.length > 0) {
+                        gallery.style.display = 'block';
+                    } else {
+                        gallery.style.display = 'none';
+                    }
                 })
-                .catch(error => console.error('Erro ao carregar fotos:', error));
+                .catch(error => {
+                    console.error('Erro ao carregar fotos:', error);
+                    gallery.style.display = 'none';
+                });
         }
     }
     
@@ -1653,8 +1672,13 @@ function downloadFile($localFile)
         }
     });
     
-    // Inicializar contagem
+    // Inicializar contagem e galeria
     updatePhotoCount();
+    
+    // Só mostrar galeria se já houver fotos salvas
+    <?php if (count($album) > 0) { ?>
+        showPhotoGallery();
+    <?php } ?>
     
     // Image preloading function with timeout
     function preloadImages() {
