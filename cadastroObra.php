@@ -1,10 +1,8 @@
 <?php
 require_once __DIR__ . '/startup.php';
 require_once __DIR__ . '/ftpFunctions.php';
-require_once __DIR__ . '/auth/CSRF.php';
 
 use Models\Obra;
-use Auth\CSRF;
 
 // Load data for form dropdowns
 $allCompanies = $dao->buscaTodasEmpresas();
@@ -27,11 +25,6 @@ if (isset($_GET['remover'])) {
 function handleFormSubmission(): void
 {
 	global $dao;
-
-	// Security verification
-	if (!CSRF::verifyPost()) {
-		redirect('cadastroObra.php?error=invalid_token');
-	}
 
 	// Collect and validate form data
 	$validationErrors = validateFormData();
@@ -216,11 +209,6 @@ function jsonResponse($data, int $statusCode = 200): never
 
         <h1 class="h3 text-center my-3">Cadastro de Obra</h1>
         
-        <?php if (isset($_GET['error']) && $_GET['error'] == 'invalid_token'): ?>
-            <div class="alert alert-danger w-75 mx-auto" role="alert">
-                Token de segurança inválido.
-            </div>
-        <?php endif; ?>
 
         <form class="w-75 mx-auto my-4" 
             action="<?= htmlspecialchars($_SERVER['PHP_SELF']) ?>"
@@ -228,7 +216,6 @@ function jsonResponse($data, int $statusCode = 200): never
             id="form"
             enctype="multipart/form-data">
             
-            <?= CSRF::getTokenField() ?>
 
             <div class="form-group my-3 w-75 mx-auto">
                 <label for="contratante">Contratante:</label>

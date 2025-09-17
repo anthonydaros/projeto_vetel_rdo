@@ -1,10 +1,8 @@
 <?php
 require_once __DIR__ . '/startup.php';
 require_once __DIR__ . '/ftpFunctions.php';
-require_once __DIR__ . '/auth/CSRF.php';
 
 use Models\Empresa;
-use Auth\CSRF;
 
 /**
  * Checks if a logo file already exists
@@ -94,11 +92,6 @@ function createCompany($dao, array $formData): bool
  */
 function handleCompanyRegistration($dao): void
 {
-	if (!CSRF::verifyPost()) {
-		redirectWithError('invalid_token');
-		return;
-	}
-
 	$validationError = validateCompanyData();
 	if ($validationError !== null) {
 		redirectWithError($validationError);
@@ -254,9 +247,6 @@ if (isset($_FILES['file']) && !empty($_FILES['file'])) {
                     <?php if (isset($_GET['error']) && $_GET['error'] == 'invalid_id') { ?>
                         <p class="small text-danger">ID inválido fornecido.</p>
                     <?php } ?>
-                    <?php if (isset($_GET['error']) && $_GET['error'] == 'invalid_token') { ?>
-                        <p class="small text-danger">Token de segurança inválido.</p>
-                    <?php } ?>
                 
                 </div>
 
@@ -276,7 +266,6 @@ if (isset($_FILES['file']) && !empty($_FILES['file'])) {
                     <p class="small text-secondary mt-2">(Marque o checkbox acima apenas caso a empresa for a contratante)</p>
                 </div>
 
-                <?php echo CSRF::getTokenField(); ?>
 
                 <button 
                     name="submit"
